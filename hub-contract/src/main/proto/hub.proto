@@ -4,6 +4,8 @@
 syntax = "proto3";
 package pt.tecnico.bicloin.hub.grpc;
 
+// ping Remote Procedure
+
 message CtrlPingRequest {
   string input = 1;
 }
@@ -11,7 +13,109 @@ message CtrlPingRequest {
 message CtrlPingResponse {
 	string output = 1;
 }
-  
+
+// balance Remote Procedure
+
+message BalanceRequest {
+  string username = 1;
+}
+
+message BalanceResponse {
+  int32 balance = 1;
+}
+
+// top_up Remote Procedure
+
+message TopUpRequest {
+  string username = 1;
+  int32 amount = 2;
+  string phone = 3;
+}
+
+message TopUpResponse {
+  int32 balance = 1;
+}
+
+// info_station Remote Procedure
+
+message InfoStationRequest {
+  string stationId = 1;
+}
+ 
+message InfoStationResponse {
+  string name = 1;
+  float latitude = 2;
+  float longitude = 3;
+  int32 dockCapacity = 4;
+  int32 reward = 5;
+  int32 availableBikes = 6;
+  int32 stationBikeUps = 7;
+  int32 stationBikeDowns = 8;
+}
+
+// locate_station Remote Procedure
+
+message LocateStationRequest {
+  float latitude = 1;
+  float longitude = 2;
+  int32 nStations = 3;
+}
+ 
+message LocateStationResponse {
+  repeated string stationIds = 1;
+}
+
+// bike_up Remote Procedure
+
+message BikeUpRequest {
+  string username = 1;
+  float userLatitude = 2;
+  float userLongitude = 3;
+  string stationId = 4; 
+}
+ 
+message BikeUpResponse {
+  enum BikeUpStatus {
+    BIKE_UP_SUCCESSFULLY = 1;
+    OUT_OF_RANGE = 2;
+    NO_BIKE_AVAILABLE = 3;
+    ALREADY_BIKED_UP = 4;
+  }
+
+  BikeUpStatus status = 1;
+}
+
+// bike_down Remote Procedure
+
+message BikeDownRequest {
+  string username = 1;
+  float userLatitude = 2;
+  float userLongitude = 3;
+  string stationId = 4; 
+}
+ 
+message BikeDownResponse {
+  enum BikeDownStatus {
+    BIKE_DOWN_SUCCESSFULLY = 1;
+    OUT_OF_RANGE = 2;
+    FULL_STATION = 3;
+    NOT_BIKED_UP = 4;
+  }
+
+  BikeDownStatus status = 1;
+}
+
+// Service HubService
+
 service HubService {
+  rpc balance(BalanceRequest) returns (BalanceResponse);
+  rpc top_up(TopUpRequest) returns (TopUpResponse);
+  
+  rpc info_station(InfoStationRequest) returns (InfoStationResponse);
+  rpc locate_station(LocateStationRequest) returns (LocateStationResponse);
+  
+  rpc bike_up(BikeUpRequest) returns (BikeUpResponse);
+  rpc bike_down(BikeDownRequest) returns (BikeDownResponse);
+  
   rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
 }

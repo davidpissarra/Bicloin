@@ -4,6 +4,8 @@
 syntax = "proto3";
 package pt.tecnico.rec.grpc;
 
+import "google/protobuf/any.proto";
+
 message CtrlPingRequest {
   string input = 1;
 }
@@ -11,7 +13,27 @@ message CtrlPingRequest {
 message CtrlPingResponse {
 	string output = 1;
 }
+
+message ReadRequest {
+  string registerName = 1;
+}
+
+message ReadResponse {
+  google.protobuf.Any registerValue = 1;
+}
+
+message WriteRequest {
+  string registerName = 1;
+  google.protobuf.Any registerValue = 2;
+}
+
+message WriteResponse {
+  // no arguments
+}
+
   
 service RecordService {
+  rpc read(ReadRequest) returns (ReadResponse);
+  rpc write(WriteRequest) returns (WriteResponse);
   rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
 }

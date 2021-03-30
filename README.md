@@ -1,21 +1,17 @@
-# CXX-Bicloin
+# A59-Bicloin
 
 Distributed Systems 2020-2021, 2nd semester project
 
 
 ## Authors
 
-**Group CXX**
+**Group A59**
 
-*(fill-in line above with group identifier e.g. A07 or T22; and then delete this line)*
+92502 [Jorge Godinho](jorge.godinho@tecnico.ulisboa.pt)
 
-... [...](mailto:...@tecnico.ulisboa.pt)
+92448 [David Pissarra](david.pissarra@tecnico.ulisboa.pt)
 
-... [...](mailto:...@tecnico.ulisboa.pt)
-
-... [...](mailto:...@tecnico.ulisboa.pt)
-
-*(fill-in lines above with student number, name, and email; and then delete this line)*
+92426 [António Branco](pedro.paredes.branco@tecnico.ulisboa.pt)
 
 ### Module leaders
 

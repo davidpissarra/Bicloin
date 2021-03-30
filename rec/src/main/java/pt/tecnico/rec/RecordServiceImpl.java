@@ -5,8 +5,16 @@ import io.grpc.stub.StreamObserver;
 public class RecordServiceImpl extends RecordServiceGrpc.RecordServiceImplBase {
     private Records records = new Records();
 
+
     @Override
-    public read(ReadRequest readRequest, StreamObserver<ReadResponse> responseObserver) {
+    public void ctrlPing(CtrlPingRequest ctrlPingRequest, StreamObserver<CtrlPingResponse> responseObserver) {
+        CtrlPingResponse response = CtrlPingResponse.newBuilder().setOutput(ctrlPingRequest.getInput());
+        responseObserver.onNext(response);
+		responseObserver.onCompleted();
+    }
+
+    @Override
+    public void read(ReadRequest readRequest, StreamObserver<ReadResponse> responseObserver) {
 
         UserRecord user = records.getUserRecord(readRequest.getUsername());
 
