@@ -1,4 +1,4 @@
-package pt.tecnico.bicloin.hub;
+package pt.tecnico.rec;
 
 import io.grpc.BindableService;
 import io.grpc.Server;
@@ -8,10 +8,10 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import java.io.IOException;
 
-public class HubMain {
+public class RecMain {
 	
 	public static void main(String[] args) throws IOException, InterruptedException, ZKNamingException {
-		System.out.println(HubMain.class.getSimpleName());
+		System.out.println(RecMain.class.getSimpleName());
 		
 		// receive and print arguments
 		System.out.printf("Received %d arguments%n", args.length);
@@ -40,7 +40,7 @@ public class HubMain {
 			zkNaming = new ZKNaming(zooHost, zooPort);
 			zkNaming.rebind(path, host, port);
 
-			final BindableService impl = new HubServerImpl(instance, zkNaming);
+			final BindableService impl = new RecServerImpl(instance);
 
 			// Create a new server to listen on port
 			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
@@ -61,6 +61,6 @@ public class HubMain {
 				zkNaming.unbind(path, host, port);
 			}
 		}
-	}
-	
+
+	}	
 }

@@ -9,6 +9,7 @@ public class BaseIT {
 
 	private static final String TEST_PROP_FILE = "/test.properties";
 	protected static Properties testProps;
+	static RecFrontend frontend;
 	
 	@BeforeAll
 	public static void oneTimeSetup () throws IOException {
@@ -23,6 +24,7 @@ public class BaseIT {
 			System.out.println(msg);
 			throw e;
 		}
+
 	}
 	
 	@AfterAll

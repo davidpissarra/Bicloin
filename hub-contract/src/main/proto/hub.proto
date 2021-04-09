@@ -4,22 +4,11 @@
 syntax = "proto3";
 package pt.tecnico.bicloin.hub.grpc;
 
-// ping Remote Procedure
-
-message CtrlPingRequest {
-  string input = 1;
-}
-
-message CtrlPingResponse {
-	string output = 1;
-}
-
 // balance Remote Procedure
 
 message BalanceRequest {
   string username = 1;
 }
-
 message BalanceResponse {
   int32 balance = 1;
 }
@@ -75,14 +64,7 @@ message BikeUpRequest {
 }
  
 message BikeUpResponse {
-  enum BikeUpStatus {
-    BIKE_UP_SUCCESSFULLY = 1;
-    OUT_OF_RANGE = 2;
-    NO_BIKE_AVAILABLE = 3;
-    ALREADY_BIKED_UP = 4;
-  }
-
-  BikeUpStatus status = 1;
+  // no arguments
 }
 
 // bike_down Remote Procedure
@@ -95,27 +77,42 @@ message BikeDownRequest {
 }
  
 message BikeDownResponse {
-  enum BikeDownStatus {
-    BIKE_DOWN_SUCCESSFULLY = 1;
-    OUT_OF_RANGE = 2;
-    FULL_STATION = 3;
-    NOT_BIKED_UP = 4;
-  }
-
-  BikeDownStatus status = 1;
+  // no arguments
 }
+
+// ping Remote Procedure
+
+message PingRequest {
+  // no arguments
+}
+message PingResponse {
+  string output = 1;
+}
+
+
+// system status Remote Procedure
+
+message SysStatusRequest {
+  // no arguments
+}
+message SysStatusResponse {
+  string output = 1;
+}
+
+
 
 // Service HubService
 
 service HubService {
   rpc balance(BalanceRequest) returns (BalanceResponse);
   rpc top_up(TopUpRequest) returns (TopUpResponse);
-  
+
   rpc info_station(InfoStationRequest) returns (InfoStationResponse);
   rpc locate_station(LocateStationRequest) returns (LocateStationResponse);
-  
+
   rpc bike_up(BikeUpRequest) returns (BikeUpResponse);
   rpc bike_down(BikeDownRequest) returns (BikeDownResponse);
-  
-  rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
+
+  rpc ping(PingRequest) returns (PingResponse);
+  rpc sys_status(SysStatusRequest) returns (SysStatusResponse);
 }

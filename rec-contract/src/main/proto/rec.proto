@@ -6,34 +6,34 @@ package pt.tecnico.rec.grpc;
 
 import "google/protobuf/any.proto";
 
-message CtrlPingRequest {
-  string input = 1;
+message PingRequest {
+  // no arguments
 }
-
-message CtrlPingResponse {
+message PingResponse {
 	string output = 1;
 }
 
 message ReadRequest {
   string registerName = 1;
 }
-
+message Balance {
+  int32 balance = 1;
+}
 message ReadResponse {
   google.protobuf.Any registerValue = 1;
 }
 
 message WriteRequest {
   string registerName = 1;
-  google.protobuf.Any registerValue = 2;
+  google.protobuf.Any value = 2;
 }
 
 message WriteResponse {
-  // no arguments
+  //no arguments
 }
 
-  
-service RecordService {
+service RecService {
+  rpc ping(PingRequest) returns (PingResponse);
   rpc read(ReadRequest) returns (ReadResponse);
   rpc write(WriteRequest) returns (WriteResponse);
-  rpc ctrl_ping(CtrlPingRequest) returns (CtrlPingResponse);
 }

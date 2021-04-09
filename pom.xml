@@ -40,7 +40,7 @@
 		builds the selected projects in order. -->
 	<modules>
 		<!-- Add later, when needed... -->
-		<!--module>zknaming</module-->
+		<module>zknaming</module>
 		<module>rec-contract</module>
 		<module>rec</module>
 		<module>rec-tester</module>
