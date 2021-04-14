@@ -35,11 +35,11 @@ message InfoStationResponse {
   string name = 1;
   float latitude = 2;
   float longitude = 3;
-  int32 dockCapacity = 4;
+  int32 docks = 4;
   int32 reward = 5;
-  int32 availableBikes = 6;
-  int32 stationBikeUps = 7;
-  int32 stationBikeDowns = 8;
+  int32 bikes = 6;
+  int32 bikeUpStats = 7;
+  int32 bikeDownStats = 8;
 }
 
 // locate_station Remote Procedure

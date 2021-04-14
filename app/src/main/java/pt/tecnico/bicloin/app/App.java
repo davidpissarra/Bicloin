@@ -133,15 +133,45 @@ public class App implements AutoCloseable {
             for(ZKRecord record : hubRecords) {
                 setHub(record);
                 try {
-                    TopUpResponse balanceResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                    TopUpResponse topUpResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                                         .topUp(topUpRequest);
-                    return balanceResponse;
+                    return topUpResponse;
                 } catch (StatusRuntimeException e) {
                     if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                         System.out.println("Timeout limit exceeded. Retrying to another hub.");
                     }
                     else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
                         System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                }
+            }
+        } catch (ZKNamingException e) {
+            System.out.println("ZKNAMING EXCEPTION");
+        }
+        return null;
+    }
+
+    public InfoStationResponse infoStation(String abrev) {
+        try {
+            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            InfoStationRequest infoStationRequest = InfoStationRequest.newBuilder()
+                                            .setStationId(abrev)
+                                            .build();
+            for(ZKRecord record : hubRecords) {
+                setHub(record);
+                try {
+                    InfoStationResponse infoStationResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                                        .infoStation(infoStationRequest);
+                    return infoStationResponse;
+                } catch (StatusRuntimeException e) {
+                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                        System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                    }
+                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                        System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                    else {
+                        System.out.println(e.getStatus().getDescription());
                     }
                 }
             }

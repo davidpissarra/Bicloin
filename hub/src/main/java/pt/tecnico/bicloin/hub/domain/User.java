@@ -57,4 +57,12 @@ public class User {
         return s != null && s.matches("^[a-zA-Z0-9]*$");
     }
 
+    public boolean equals(String id) {
+        return this.id.equals(id);
+    }
+
+    public boolean equals(String id, String phoneNumber) {
+        return this.id.equals(id) && this.phoneNumber.equals(phoneNumber);
+    }
+
 }

@@ -62,4 +62,8 @@ public class Station {
         this.abrev = abrev;
     }
 
+    public boolean equals(String id) {
+        return this.abrev.equals(id);
+    }
+
 }

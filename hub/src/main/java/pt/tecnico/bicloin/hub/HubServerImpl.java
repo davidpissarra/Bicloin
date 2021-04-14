@@ -1,9 +1,7 @@
 package pt.tecnico.bicloin.hub;
 
-import pt.tecnico.bicloin.hub.domain.User;
-import pt.tecnico.bicloin.hub.domain.exception.InvalidStationException;
+import pt.tecnico.bicloin.hub.domain.ImmutableRecords;
 import pt.tecnico.bicloin.hub.domain.Station;
-
 import io.grpc.Context;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -20,6 +18,7 @@ import pt.tecnico.rec.grpc.Rec.Balance;
 import pt.tecnico.rec.grpc.Rec.ReadRequest;
 import pt.tecnico.rec.grpc.Rec.ReadResponse;
 import pt.tecnico.bicloin.hub.grpc.Hub;
+import pt.tecnico.bicloin.hub.grpc.Hub.*;
 import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.Rec.*;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
@@ -27,6 +26,7 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import static io.grpc.Status.INTERNAL;
+import static io.grpc.Status.INVALID_ARGUMENT;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -38,14 +38,11 @@ import java.util.Scanner;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import static pt.tecnico.bicloin.hub.domain.exception.ErrorMessage.*;
-
 public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     
     private Integer instance;
     private ZKNaming zkNaming;
-    private final List<User> users;
-    private final List<Station> stations;
+    private ImmutableRecords immutableRecords;
 
     private ManagedChannel channel = null;
     private HubServiceGrpc.HubServiceBlockingStub hubStub = null;
@@ -55,67 +52,13 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         super();
         this.instance = instance;
         this.zkNaming = zkNaming;
-        this.users = importUsers(users);
-        this.stations = importStations(stations, initRec);
-    }
-
-    private List<User> importUsers(String usersFilename) throws FileNotFoundException {
-        List<User> users = new ArrayList<>();
-        String path = "src/main/java/pt/tecnico/bicloin/hub/" + usersFilename;
-        Scanner scanner = new Scanner(new File(path));
-        while(scanner.hasNext()) {
-            String[] args = scanner.nextLine().split(",");
-            String id = args[0];
-            String name = args[1];
-            String phoneNumber = args[2];
-            users.add(new User(id, name, phoneNumber));
-        }
-        scanner.close();
-        return users;
-    }
-
-    private List<Station> importStations(String stationsFilename, boolean initRec) throws FileNotFoundException {
-        List<Station> stations = new ArrayList<>();
-        String path = "src/main/java/pt/tecnico/bicloin/hub/" + stationsFilename;
-        Scanner scanner = new Scanner(new File(path));
-        while(scanner.hasNext()) {
-            String[] args = scanner.nextLine().split(",");
-            String name = args[0];
-            String abrev = args[1];
-            float latitude = Float.parseFloat(args[2]);
-            float longitude = Float.parseFloat(args[3]);
-            Integer docks = Integer.parseInt(args[4]);
-            Integer bikesAvailable = Integer.parseInt(args[5]);
-            Integer reward = Integer.parseInt(args[6]);
-
-            if(bikesAvailable > docks) {
-                throw new InvalidStationException(INVALID_NUMBER_BIKES_AVAILABLE, abrev);
-            }
-
-            stations.add(new Station(name, abrev, latitude, longitude, docks, reward));
-            if(initRec) {
-                String registerName = "bikes-" + abrev;
-                StationBikes stationBikes = StationBikes.newBuilder().setStationBikes(bikesAvailable).build();
-                WriteRequest writeRequest = WriteRequest
-                                                .newBuilder()
-                                                .setRegisterName(registerName)
-                                                .setValue(Any.pack(stationBikes))
-                                                .build();
-                try {
-                    ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-                    setRec(recRecord);
-                    try {
-                        recStub.write(writeRequest);
-                    } catch(StatusRuntimeException e) {
-                        System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
-                    }
-                } catch(ZKNamingException e) {
-                    System.out.println(e.getMessage());
-                }    
-            }
-        }
-        scanner.close();
-        return stations;
+        try {
+            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
+            setRec(recRecord);
+            immutableRecords = new ImmutableRecords(users, stations, initRec, recStub);
+        } catch(ZKNamingException e) {
+            System.out.println(e.getMessage());
+        }    
     }
 
     private void setHub(ZKRecord record) {
@@ -204,7 +147,10 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void balance(BalanceRequest request, StreamObserver<BalanceResponse> responseObserver) {
         String username = request.getUsername();
-        // TODO: check if username in users
+        if(!immutableRecords.existsUser(username)) {
+            responseObserver.onError(INTERNAL.withDescription("Inexistent user.").asRuntimeException());
+            return;
+        }
 
         String registerName = "balance-" + username;
         ReadRequest readRequest = ReadRequest.newBuilder().setRegisterName(registerName).build();
@@ -234,8 +180,11 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void topUp(TopUpRequest topUpRequest, StreamObserver<TopUpResponse> responseObserver) {
         String username = topUpRequest.getUsername();
-        String phoneNumbeString = topUpRequest.getPhone();
-        // TODO: check if username and phoneNumber in users
+        String phoneNumber = topUpRequest.getPhone();
+        if(!immutableRecords.existsUser(username, phoneNumber)) {
+            responseObserver.onError(INTERNAL.withDescription("Inexistent user.").asRuntimeException());
+            return;
+        }
 
         String registerName = "balance-" + topUpRequest.getUsername();
         ReadRequest readRequest = ReadRequest.newBuilder().setRegisterName(registerName).build();
@@ -270,5 +219,64 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         } catch(ZKNamingException e) {
             responseObserver.onError(INTERNAL.withDescription("Internal error.").asRuntimeException());
         }    
+    }
+
+    @Override
+    public void infoStation(InfoStationRequest request, StreamObserver<InfoStationResponse> responseObserver) {
+        String stationId = request.getStationId();
+        if(!immutableRecords.existsStation(stationId)) {
+            responseObserver.onError(INTERNAL.withDescription("Inexistent station.").asRuntimeException());
+            return;
+        }
+        Station station = immutableRecords.getStation(stationId);
+        String bikesRegisterName = "bikes-" + stationId;
+        String bikeUpStatsRegisterName = "bikeUpStats-" + stationId;
+        String bikeDownStatsRegisterName = "bikeDownStats-" + stationId;
+        ReadRequest bikesReadRequest = ReadRequest.newBuilder().setRegisterName(bikesRegisterName).build();
+        ReadRequest bikeUpStatsReadRequest = ReadRequest.newBuilder().setRegisterName(bikeUpStatsRegisterName).build();
+        ReadRequest bikeDownStatsReadRequest = ReadRequest.newBuilder().setRegisterName(bikeDownStatsRegisterName).build();
+        try {
+            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
+            setRec(recRecord);
+            try {
+                ReadResponse bikesReadResponse = recStub.read(bikesReadRequest);
+                ReadResponse bikeUpStatsReadResponse = recStub.read(bikeUpStatsReadRequest);
+                ReadResponse bikeDownStatsReadResponse = recStub.read(bikeDownStatsReadRequest);
+
+                String name = station.getName();
+                float latitude = station.getLatitude();
+                float longitude = station.getLongitude();
+                Integer docks = station.getDocks();
+                Integer reward = station.getReward();
+                Integer bikes = bikesReadResponse.getRegisterValue().unpack(Bikes.class).getBikes();
+                Integer bikeUpStats = bikeUpStatsReadResponse.getRegisterValue().unpack(BikeUpStats.class).getBikeUpStats();
+                Integer bikeDownStats = bikeDownStatsReadResponse.getRegisterValue().unpack(BikeDownStats.class).getBikeDownStats();
+
+                
+                InfoStationResponse infoStationResponse = InfoStationResponse
+                                    .newBuilder()
+                                    .setName(name)
+                                    .setLatitude(latitude)
+                                    .setLongitude(longitude)
+                                    .setDocks(docks)
+                                    .setReward(reward)
+                                    .setBikes(bikes)
+                                    .setBikeUpStats(bikeUpStats)
+                                    .setBikeDownStats(bikeDownStats)
+                                    .build();
+                
+                if(Context.current().isCancelled()) {
+                    return;
+                }
+
+                responseObserver.onNext(infoStationResponse);
+                responseObserver.onCompleted();
+                return;
+            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+                System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
+            }
+        } catch(ZKNamingException e) {
+            responseObserver.onError(INTERNAL.withDescription("Internal error.").asRuntimeException());
+        } 
     }
 }

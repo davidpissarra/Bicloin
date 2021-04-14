@@ -33,16 +33,32 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         String type = registerName.substring(0, lastSlashIndex);
 
         if(type.equals("balance")) {
-            Balance balance = Balance.newBuilder().setBalance( (Integer) records.readBalance(registerName) ).build();
+            Balance balance = Balance.newBuilder().setBalance(records.readBalance(registerName)).build();
 			Any value = Any.pack(balance);
             return ReadResponse.newBuilder().setRegisterValue(value).build();
         }
+        else if(type.equals("bikes")) {
+            Bikes bikes = Bikes.newBuilder().setBikes(records.readBikes(registerName)).build();
+			Any value = Any.pack(bikes);
+            return ReadResponse.newBuilder().setRegisterValue(value).build();
+        }
+        else if(type.equals("bikeUpStats")) {
+            BikeUpStats bikeUpStats = BikeUpStats.newBuilder().setBikeUpStats(records.readBikeUpStats(registerName)).build();
+			Any value = Any.pack(bikeUpStats);
+            return ReadResponse.newBuilder().setRegisterValue(value).build();
+        }
+        else if(type.equals("bikeDownStats")) {
+            BikeDownStats bikeDownStats = BikeDownStats.newBuilder().setBikeDownStats(records.readBikeDownStats(registerName)).build();
+			Any value = Any.pack(bikeDownStats);
+            return ReadResponse.newBuilder().setRegisterValue(value).build();
+        }
+
         return null;
     }
 
     @Override
     public void read(ReadRequest request, StreamObserver<ReadResponse> responseObserver) {
-        String registerName = request.getRegisterName(); // balance-username / bikes-abrev
+        String registerName = request.getRegisterName(); // balance-username / bikes-abrev / ...
 
         ReadResponse response = buildReadResponse(registerName);
         
@@ -66,9 +82,28 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
 
         else if(type.equals("bikes")) {
             try {
-                Integer stationBikes = request.getValue().unpack(StationBikes.class).getStationBikes();
-                System.out.println(stationBikes);
-                records.writeStationBikes(registerName, stationBikes);
+                Integer bikes = request.getValue().unpack(Bikes.class).getBikes();
+                records.writeBikes(registerName, bikes);
+                return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
+            } catch (InvalidProtocolBufferException e) {
+                responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+            }
+        }
+
+        else if(type.equals("bikeUpStats")) {
+            try {
+                Integer bikeUpStats = request.getValue().unpack(BikeUpStats.class).getBikeUpStats();
+                records.writeBikeUpStats(registerName, bikeUpStats);
+                return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
+            } catch (InvalidProtocolBufferException e) {
+                responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+            }
+        }
+        
+        else if(type.equals("bikeDownStats")) {
+            try {
+                Integer bikeDownStats = request.getValue().unpack(BikeDownStats.class).getBikeDownStats();
+                records.writeBikeDownStats(registerName, bikeDownStats);
                 return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
@@ -80,7 +115,7 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
 
     @Override
     public void write(WriteRequest request, StreamObserver<WriteResponse> responseObserver) {
-        String registerName = request.getRegisterName(); // balance-username / bikes-abrev
+        String registerName = request.getRegisterName(); // balance-username / bikes-abrev / ...
 
         WriteResponse response = setValue(registerName, request, responseObserver);
         responseObserver.onNext(response);

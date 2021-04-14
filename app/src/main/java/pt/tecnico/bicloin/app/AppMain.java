@@ -5,6 +5,7 @@ import java.util.Scanner;
 
 import com.google.protobuf.Message;
 
+import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.grpc.Hub.*;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
@@ -56,7 +57,7 @@ public class AppMain {
 					printResponse( app.ping(), user );
 				}
 				
-				else if(command.equals("sys_status")) {
+				else if(command.equals("sys-status")) {
 					printResponse( app.sysStatus(), user );
 				}
 
@@ -64,7 +65,7 @@ public class AppMain {
 					printResponse( app.balance(user), user );
 				}
 
-				else if(command.contains("top_up")) {
+				else if(command.contains("top-up")) {
 					String[] tokens = command.split(" ");
 					if(tokens.length != 2) {
 						System.out.println("Comando não encontrado.");
@@ -77,6 +78,38 @@ public class AppMain {
 					else {
 						System.out.println("Carregamento deve ser entre 1 e 20 Euros.");
 					}
+				}
+				else if(command.contains("info")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length != 2) {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
+					printResponse( app.infoStation(tokens[1]), user );
+				}
+				else if(command.contains("tag")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length != 4) {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
+					//printResponse( app.tag(tokens[1]), user );
+				}
+				else if(command.contains("bike-up")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length != 2) {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
+					//printResponse( app.bikeUp(tokens[1]), user );
+				}
+				else if(command.contains("bike-down")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length != 2) {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
+					//printResponse( app.bikeDown(tokens[1]), user );
 				}
 				else {
 					System.out.println("Comando não encontrado.");
@@ -101,6 +134,21 @@ public class AppMain {
 		else if(message instanceof TopUpResponse) {
 			TopUpResponse topUpResponse = (TopUpResponse) message;
 			System.out.println(user.getId() + " " + topUpResponse.getBalance() + " BIC");
+		}
+		else if(message instanceof InfoStationResponse) {
+			InfoStationResponse infoStationResponse = (InfoStationResponse) message;
+			String output = infoStationResponse.getName() + ", "
+								+ "lat " + infoStationResponse.getLatitude() + ", "
+								+ infoStationResponse.getLongitude() + " long, "
+								+ infoStationResponse.getDocks() + " docas, "
+								+ infoStationResponse.getReward() + " BIC prémio, "
+								+ infoStationResponse.getBikes() + " bicicletas, "
+								+ infoStationResponse.getBikeUpStats() + " levantamentos, "
+								+ infoStationResponse.getBikeDownStats() + " devoluções, "
+								+ "https://www.google.com/maps/place/"
+								+ infoStationResponse.getLatitude() + ","
+								+ infoStationResponse.getLongitude();
+			System.out.println(output);
 		}
 	}
 

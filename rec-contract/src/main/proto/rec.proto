@@ -19,8 +19,14 @@ message ReadRequest {
 message Balance {
   int32 balance = 1;
 }
-message StationBikes {
-  int32 stationBikes = 1;
+message Bikes {
+  int32 bikes = 1;
+}
+message BikeUpStats {
+  int32 bikeUpStats = 1;
+}
+message BikeDownStats {
+  int32 bikeDownStats = 1;
 }
 message ReadResponse {
   google.protobuf.Any registerValue = 1;
