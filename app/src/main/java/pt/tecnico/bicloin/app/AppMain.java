@@ -8,6 +8,9 @@ import com.google.protobuf.Message;
 import pt.tecnico.bicloin.hub.grpc.Hub.*;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
+import pt.tecnico.bicloin.app.domain.User;
+import pt.tecnico.bicloin.app.domain.exception.InvalidUserException;
+
 public class AppMain {
 	
 	public static void main(String[] args) throws ZKNamingException {
@@ -26,47 +29,79 @@ public class AppMain {
 
 		final String zooHost = args[0];
 		final String zooPort = args[1];
-		final String userId = args[2];
-		final String userPhoneNumber = args[3];
-		final String userLatitude = args[4];
-		final String userLongitude = args[5];
-
-		App app = new App(zooHost, zooPort);
-
-		if(args.length == 6) {
-			readCommands(System.in, app);
-		}
-
-		if(args.length == 7) {
-			// TODO readCommands();
+		try {
+			final User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
+			
+			App app = new App(zooHost, zooPort);
+			
+			if(args.length == 6) {
+				readCommands(System.in, app, user);
+			}
+			
+			if(args.length == 7) {
+				// TODO readCommands();
+			}
+		} catch(InvalidUserException e) {
+			System.out.println(e.getMessage());
+			return;
 		}
 	}
 
-	private static void readCommands(InputStream inputStream, App app) {
+	private static void readCommands(InputStream inputStream, App app, User user) {
 		try (Scanner scanner = new Scanner(inputStream)) {
 			while(true) {
 				String command = scanner.nextLine();
-	
+
 				if(command.equals("ping")) {
-					printResponse( app.ping() );
+					printResponse( app.ping(), user );
 				}
-
+				
 				else if(command.equals("sys_status")) {
-					printResponse( app.sysStatus() );
+					printResponse( app.sysStatus(), user );
 				}
 
+				else if(command.equals("balance")) {
+					printResponse( app.balance(user), user );
+				}
+
+				else if(command.contains("top_up")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length != 2) {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
+					Integer value = Integer.parseInt(tokens[1]);
+					if(value >= 1 && value <= 20) {
+						printResponse( app.topUp(value, user), user );
+					}
+					else {
+						System.out.println("Carregamento deve ser entre 1 e 20 Euros.");
+					}
+				}
+				else {
+					System.out.println("Comando não encontrado.");
+				}
 			}
 		}
 	}
 
-	private static void printResponse(Message message) {
+	private static void printResponse(Message message, User user) {
 		if(message instanceof PingResponse) {
 			PingResponse pingResponse = (PingResponse) message;
 			System.out.println(pingResponse.getOutput());
-		} else if(message instanceof SysStatusResponse) {
+		}
+		else if(message instanceof SysStatusResponse) {
 			SysStatusResponse sysStatusResponse = (SysStatusResponse) message;
 			System.out.println(sysStatusResponse.getOutput());
-		} 
+		}
+		else if(message instanceof BalanceResponse) {
+			BalanceResponse balanceResponse = (BalanceResponse) message;
+			System.out.println(user.getId() + " " + balanceResponse.getBalance() + " BIC");
+		}
+		else if(message instanceof TopUpResponse) {
+			TopUpResponse topUpResponse = (TopUpResponse) message;
+			System.out.println(user.getId() + " " + topUpResponse.getBalance() + " BIC");
+		}
 	}
 
 }

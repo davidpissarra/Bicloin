@@ -3,11 +3,14 @@ package pt.tecnico.bicloin.app;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.grpc.Hub.*;
+import pt.tecnico.bicloin.app.domain.User;
 import pt.tecnico.bicloin.hub.grpc.HubServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
@@ -17,16 +20,22 @@ public class App implements AutoCloseable {
     private ManagedChannel channel = null;
     private HubServiceGrpc.HubServiceBlockingStub stub = null;
     private ZKNaming zkNaming;
-    private List<ZKRecord> seenHubs = new ArrayList<>();
-    private ZKRecord record;
+    private int timeoutDelay = 2; //seconds
 
     public App(String zooHost, String zooPort) throws ZKNamingException {
         zkNaming = new ZKNaming(zooHost, zooPort);
     }
 
-    private void setHub(String target) {
+    private void setHub(ZKRecord record) {
+        String target = record.getURI();
         this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         this.stub = HubServiceGrpc.newBlockingStub(channel);
+    }
+
+    private Integer getInstanceNumber(ZKRecord record) {
+        String path = record.getPath();
+        Integer lastSlashIndex = path.lastIndexOf('/');
+		return Integer.valueOf(path.substring(lastSlashIndex + 1));
     }
 
 
@@ -42,22 +51,19 @@ public class App implements AutoCloseable {
     }
 
     private PingResponse tryPing(Collection<ZKRecord> hubRecords, PingRequest pingRequest) {
-        try {
-            for(ZKRecord record : hubRecords) {
-                this.record = record;
-                String target = record.getURI();
-                setHub(target);
-                if(seenHubs.contains(record)) {
-                    continue;
-                }
-                PingResponse pingResponse = this.stub.ping(pingRequest);
-                seenHubs.clear();
+        for(ZKRecord record : hubRecords) {
+            setHub(record);
+            try {
+                PingResponse pingResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).ping(pingRequest);
                 return pingResponse;
+            } catch (StatusRuntimeException e) {
+                if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                    System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                }
+                else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                    System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                }
             }
-        } catch (StatusRuntimeException e) {
-            System.out.println("RPC FAILED.");
-            seenHubs.add(this.record);
-            tryPing(hubRecords, pingRequest);
         }
         return null;
     }
@@ -74,20 +80,73 @@ public class App implements AutoCloseable {
     }
 
     private SysStatusResponse trySysStatus(Collection<ZKRecord> hubRecords, SysStatusRequest sysStatusRequest) {
-        try {
-            for(ZKRecord record : hubRecords) {
-                String target = record.getURI();
-                setHub(target);
-                if(seenHubs.contains(record)) {
-                    continue;
-                }
-                seenHubs.add(record);
-                SysStatusResponse sysStatusResponse = this.stub.sysStatus(sysStatusRequest);
-                seenHubs.clear();
+        for(ZKRecord record : hubRecords) {
+            setHub(record);
+            try {
+                SysStatusResponse sysStatusResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).sysStatus(sysStatusRequest);
                 return sysStatusResponse;
+            } catch (StatusRuntimeException e) {
+                if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                    System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                }
+                else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                    System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                }
             }
-        } catch (StatusRuntimeException e) {
-            return trySysStatus(hubRecords, sysStatusRequest);
+        }
+        return null;
+    }
+
+    public BalanceResponse balance(User user) {
+        try {
+            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            BalanceRequest balanceRequest = BalanceRequest.newBuilder().setUsername(user.getId()).build();
+            for(ZKRecord record : hubRecords) {
+                setHub(record);
+                try {
+                    BalanceResponse balanceResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                                        .balance(balanceRequest);
+                    return balanceResponse;
+                } catch (StatusRuntimeException e) {
+                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                        System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                    }
+                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                        System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                }
+            }
+        } catch (ZKNamingException e) {
+            System.out.println("ZKNAMING EXCEPTION");
+        }
+        return null;
+    }
+
+    public TopUpResponse topUp(Integer value, User user) {
+        try {
+            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            TopUpRequest topUpRequest = TopUpRequest.newBuilder()
+                                            .setUsername(user.getId())
+                                            .setAmount(value)
+                                            .setPhone(user.getPhoneNumber())
+                                            .build();
+            for(ZKRecord record : hubRecords) {
+                setHub(record);
+                try {
+                    TopUpResponse balanceResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                                        .topUp(topUpRequest);
+                    return balanceResponse;
+                } catch (StatusRuntimeException e) {
+                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                        System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                    }
+                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                        System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                }
+            }
+        } catch (ZKNamingException e) {
+            System.out.println("ZKNAMING EXCEPTION");
         }
         return null;
     }

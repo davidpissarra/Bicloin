@@ -19,6 +19,9 @@ message ReadRequest {
 message Balance {
   int32 balance = 1;
 }
+message StationBikes {
+  int32 stationBikes = 1;
+}
 message ReadResponse {
   google.protobuf.Any registerValue = 1;
 }
@@ -29,7 +32,7 @@ message WriteRequest {
 }
 
 message WriteResponse {
-  //no arguments
+  google.protobuf.Any registerValue = 1;
 }
 
 service RecService {

@@ -101,6 +101,9 @@
 						<argument>${hub.host}</argument>
 						<argument>${hub.port}</argument>
 						<argument>${hub.path}</argument>
+						<argument>users.csv</argument>
+						<argument>stations.csv</argument>
+						<argument>initRec</argument>
 					</arguments>
 				</configuration>
 			</plugin>

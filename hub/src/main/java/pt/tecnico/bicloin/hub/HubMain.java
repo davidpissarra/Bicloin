@@ -3,9 +3,12 @@ package pt.tecnico.bicloin.hub;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import pt.tecnico.bicloin.hub.domain.exception.InvalidStationException;
+import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class HubMain {
@@ -31,6 +34,8 @@ public class HubMain {
 		final String host = args[2];
 		final String port = args[3];
 		final String path = args[4];
+		final String users = args[5];
+		final String stations = args[6];
 
 		Integer lastSlashIndex = path.lastIndexOf('/');
 		final Integer instance = Integer.valueOf(path.substring(lastSlashIndex + 1));
@@ -40,7 +45,8 @@ public class HubMain {
 			zkNaming = new ZKNaming(zooHost, zooPort);
 			zkNaming.rebind(path, host, port);
 
-			final BindableService impl = new HubServerImpl(instance, zkNaming);
+			boolean initRec = args.length == 8;
+			final BindableService impl = new HubServerImpl(instance, zkNaming, users, stations, initRec);
 
 			// Create a new server to listen on port
 			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
@@ -56,6 +62,9 @@ public class HubMain {
 			// Do not exit the main thread. Wait until server is terminated.
 			server.awaitTermination();
 
+		} catch(InvalidUserException | InvalidStationException | FileNotFoundException e) {
+			System.out.println(e.getMessage());
+			return;
 		} finally {
 			if(zkNaming != null) {
 				zkNaming.unbind(path, host, port);
