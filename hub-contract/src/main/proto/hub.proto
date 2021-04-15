@@ -50,8 +50,18 @@ message LocateStationRequest {
   int32 nStations = 3;
 }
  
+message StationProtoMessage {
+  string abrev = 1;
+  float latitude = 2;
+  float longitude = 3;
+  int32 docks = 4;
+  int32 reward = 5;
+  int32 bikes = 6;
+  int32 distance = 7;
+}
+
 message LocateStationResponse {
-  repeated string stationIds = 1;
+  repeated StationProtoMessage stations = 1;
 }
 
 // bike_up Remote Procedure

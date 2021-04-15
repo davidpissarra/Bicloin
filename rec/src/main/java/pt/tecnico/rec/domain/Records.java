@@ -8,6 +8,7 @@ public class Records {
     private Map<String, Integer> bikes = new HashMap<>();
     private Map<String, Integer> bikeUpStats = new HashMap<>();
     private Map<String, Integer> bikeDownStats = new HashMap<>();
+    private Map<String, Boolean> isUserBikedUp = new HashMap<>();
 
     public Integer readBalance(String registerName) {
         if(!balances.containsKey(registerName)) {

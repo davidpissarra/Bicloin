@@ -2,8 +2,11 @@ package pt.tecnico.bicloin.app;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import com.google.protobuf.Message;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -26,9 +29,11 @@ public class App implements AutoCloseable {
     private ZKNaming zkNaming;
     private int timeoutDelay = 2; //seconds
     private Map<String, Tag> tags = new HashMap<>();
+    private User user;
 
-    public App(String zooHost, String zooPort) throws ZKNamingException {
+    public App(String zooHost, String zooPort, User user) throws ZKNamingException {
         zkNaming = new ZKNaming(zooHost, zooPort);
+        this.user = user;
     }
 
     private void setHub(ZKRecord record) {
@@ -52,7 +57,7 @@ public class App implements AutoCloseable {
         }
     }
 
-    public void move(String tagName, User user) {
+    public void move(String tagName) {
         if(tags.containsKey(tagName)) {
             try {
                 Tag tag = tags.get(tagName);
@@ -67,7 +72,7 @@ public class App implements AutoCloseable {
         }
     }
 
-    public void move(float latitude, float longitude, User user) {
+    public void move(float latitude, float longitude) {
         try {
             user.setLocation(latitude, longitude);
             System.out.println("OK");
@@ -76,15 +81,57 @@ public class App implements AutoCloseable {
         }
     }
 
-    public PingResponse ping() {
-        PingRequest pingRequest = PingRequest.newBuilder().build();
+    public void at() {
+        float latitude = user.getLatitude();
+        float longitude = user.getLongitude();
+        String username = user.getId();
+        System.out.println(username + " em https://www.google.com/maps/place/" + latitude + "," + longitude);
+    }
+
+    public void scan(Integer nStations) {
+        LocateStationRequest request = LocateStationRequest
+                                            .newBuilder()
+                                            .setLatitude(user.getLatitude())
+                                            .setLongitude(user.getLongitude())
+                                            .setNStations(nStations)
+                                            .build();
         try {
             Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
-			return tryPing(hubRecords, pingRequest);
+            LocateStationResponse response = tryScan(hubRecords, request);
+            printResponse(response);
         } catch (ZKNamingException e) {
             System.out.println("ZKNAMING EXCEPTION");
         }
+        
+    }
+
+    private LocateStationResponse tryScan(Collection<ZKRecord> hubRecords, LocateStationRequest request) {
+        for(ZKRecord record : hubRecords) {
+            setHub(record);
+            try {
+                LocateStationResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).locateStation(request);
+                return response;
+            } catch (StatusRuntimeException e) {
+                if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                    System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                }
+                else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                    System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                }
+            }
+        }
         return null;
+    }
+
+    public void ping() {
+        PingRequest pingRequest = PingRequest.newBuilder().build();
+        try {
+            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+			PingResponse response = tryPing(hubRecords, pingRequest);
+            printResponse(response);
+        } catch (ZKNamingException e) {
+            System.out.println("ZKNAMING EXCEPTION");
+        }
     }
 
     private PingResponse tryPing(Collection<ZKRecord> hubRecords, PingRequest pingRequest) {
@@ -105,15 +152,15 @@ public class App implements AutoCloseable {
         return null;
     }
 
-    public SysStatusResponse sysStatus() {
+    public void sysStatus() {
         SysStatusRequest sysStatusRequest = SysStatusRequest.newBuilder().build();
         try {
             Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
-            return trySysStatus(hubRecords, sysStatusRequest);
+            SysStatusResponse response = trySysStatus(hubRecords, sysStatusRequest);
+            printResponse(response);
         } catch (ZKNamingException e) {
             System.out.println("ZKNAMING EXCEPTION");
         }
-        return null;
     }
 
     private SysStatusResponse trySysStatus(Collection<ZKRecord> hubRecords, SysStatusRequest sysStatusRequest) {
@@ -134,16 +181,16 @@ public class App implements AutoCloseable {
         return null;
     }
 
-    public BalanceResponse balance(User user) {
+    public void balance() {
         try {
             Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
             BalanceRequest balanceRequest = BalanceRequest.newBuilder().setUsername(user.getId()).build();
             for(ZKRecord record : hubRecords) {
                 setHub(record);
                 try {
-                    BalanceResponse balanceResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                    BalanceResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                                         .balance(balanceRequest);
-                    return balanceResponse;
+                    printResponse(response);
                 } catch (StatusRuntimeException e) {
                     if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                         System.out.println("Timeout limit exceeded. Retrying to another hub.");
@@ -159,10 +206,9 @@ public class App implements AutoCloseable {
         } catch (ZKNamingException e) {
             System.out.println("ZKNAMING EXCEPTION");
         }
-        return null;
     }
 
-    public TopUpResponse topUp(Integer value, User user) {
+    public void topUp(Integer value) {
         try {
             Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
             TopUpRequest topUpRequest = TopUpRequest.newBuilder()
@@ -173,9 +219,9 @@ public class App implements AutoCloseable {
             for(ZKRecord record : hubRecords) {
                 setHub(record);
                 try {
-                    TopUpResponse topUpResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                    TopUpResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                                         .topUp(topUpRequest);
-                    return topUpResponse;
+                    printResponse(response);
                 } catch (StatusRuntimeException e) {
                     if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                         System.out.println("Timeout limit exceeded. Retrying to another hub.");
@@ -191,10 +237,9 @@ public class App implements AutoCloseable {
         } catch (ZKNamingException e) {
             System.out.println("ZKNAMING EXCEPTION");
         }
-        return null;
     }
 
-    public InfoStationResponse infoStation(String abrev) {
+    public void infoStation(String abrev) {
         try {
             Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
             InfoStationRequest infoStationRequest = InfoStationRequest.newBuilder()
@@ -203,9 +248,9 @@ public class App implements AutoCloseable {
             for(ZKRecord record : hubRecords) {
                 setHub(record);
                 try {
-                    InfoStationResponse infoStationResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                    InfoStationResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                                         .infoStation(infoStationRequest);
-                    return infoStationResponse;
+                    printResponse(response);
                 } catch (StatusRuntimeException e) {
                     if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                         System.out.println("Timeout limit exceeded. Retrying to another hub.");
@@ -221,8 +266,125 @@ public class App implements AutoCloseable {
         } catch (ZKNamingException e) {
             System.out.println("ZKNAMING EXCEPTION");
         }
-        return null;
     }
+
+    public void bikeUp(String abrev) {
+        try {
+            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            BikeUpRequest request = BikeUpRequest
+                                            .newBuilder()
+                                            .setUsername(user.getId())
+                                            .setUserLatitude(user.getLatitude())
+                                            .setUserLongitude(user.getLongitude())
+                                            .setStationId(abrev)
+                                            .build();
+            for(ZKRecord record : hubRecords) {
+                setHub(record);
+                try {
+                    BikeUpResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                                        .bikeUp(request);
+                    printResponse(response);
+                } catch (StatusRuntimeException e) {
+                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                        System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                    }
+                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                        System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                    else {
+                        System.out.println(e.getStatus().getDescription());
+                    }
+                }
+            }
+        } catch (ZKNamingException e) {
+            System.out.println("ZKNAMING EXCEPTION");
+        }
+    }
+
+    public void bikeDown(String abrev) {
+        try {
+            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            BikeDownRequest request = BikeDownRequest
+                                            .newBuilder()
+                                            .setUsername(user.getId())
+                                            .setUserLatitude(user.getLatitude())
+                                            .setUserLongitude(user.getLongitude())
+                                            .setStationId(abrev)
+                                            .build();
+            for(ZKRecord record : hubRecords) {
+                setHub(record);
+                try {
+                    BikeDownResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                                        .bikeDown(request);
+                    printResponse(response);
+                } catch (StatusRuntimeException e) {
+                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                        System.out.println("Timeout limit exceeded. Retrying to another hub.");
+                    }
+                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                        System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                    else {
+                        System.out.println(e.getStatus().getDescription());
+                    }
+                }
+            }
+        } catch (ZKNamingException e) {
+            System.out.println("ZKNAMING EXCEPTION");
+        }
+    }
+
+    private void printResponse(Message message) {
+		if(message instanceof PingResponse) {
+			PingResponse pingResponse = (PingResponse) message;
+			System.out.println(pingResponse.getOutput());
+		}
+		else if(message instanceof SysStatusResponse) {
+			SysStatusResponse sysStatusResponse = (SysStatusResponse) message;
+			System.out.println(sysStatusResponse.getOutput());
+		}
+		else if(message instanceof BalanceResponse) {
+			BalanceResponse balanceResponse = (BalanceResponse) message;
+			System.out.println(user.getId() + " " + balanceResponse.getBalance() + " BIC");
+		}
+		else if(message instanceof TopUpResponse) {
+			TopUpResponse topUpResponse = (TopUpResponse) message;
+			System.out.println(user.getId() + " " + topUpResponse.getBalance() + " BIC");
+		}
+		else if(message instanceof InfoStationResponse) {
+			InfoStationResponse infoStationResponse = (InfoStationResponse) message;
+			String output = infoStationResponse.getName() + ", "
+								+ "lat " + infoStationResponse.getLatitude() + ", "
+								+ infoStationResponse.getLongitude() + " long, "
+								+ infoStationResponse.getDocks() + " docas, "
+								+ infoStationResponse.getReward() + " BIC prémio, "
+								+ infoStationResponse.getBikes() + " bicicletas, "
+								+ infoStationResponse.getBikeUpStats() + " levantamentos, "
+								+ infoStationResponse.getBikeDownStats() + " devoluções, "
+								+ "https://www.google.com/maps/place/"
+								+ infoStationResponse.getLatitude() + ","
+								+ infoStationResponse.getLongitude();
+			System.out.println(output);
+		}
+		else if(message instanceof LocateStationResponse) {
+			LocateStationResponse locateStationResponse = (LocateStationResponse) message;
+            List<StationProtoMessage> nStations = locateStationResponse.getStationsList();
+
+            nStations.forEach(station -> {
+                String output = station.getAbrev() + ", "
+                                    + "lat " + station.getLatitude() + ", "
+                                    + station.getLongitude() + " long, "
+                                    + station.getDocks() + " docas, "
+                                    + station.getReward() + " BIC prémio, "
+                                    + station.getBikes() + " bicicletas, a "
+                                    + station.getDistance() + " metros";
+                System.out.println(output);
+            });
+        }
+        else if(message instanceof BikeUpResponse || message instanceof BikeDownResponse) {
+			System.out.println("OK");
+		}
+	}
 
     @Override
     public void close() throws Exception {

@@ -28,6 +28,9 @@ message BikeUpStats {
 message BikeDownStats {
   int32 bikeDownStats = 1;
 }
+message IsBikedUp {
+  bool isBikedUp = 1;
+}
 message ReadResponse {
   google.protobuf.Any registerValue = 1;
 }

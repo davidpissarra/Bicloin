@@ -14,6 +14,7 @@ import pt.tecnico.rec.grpc.RecServiceGrpc;
 import pt.tecnico.rec.grpc.Rec.BikeDownStats;
 import pt.tecnico.rec.grpc.Rec.BikeUpStats;
 import pt.tecnico.rec.grpc.Rec.Bikes;
+import pt.tecnico.rec.grpc.Rec.IsBikedUp;
 import pt.tecnico.rec.grpc.Rec.WriteRequest;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
@@ -30,11 +31,15 @@ public class ImmutableRecords {
     private final List<Station> stations = new ArrayList<>();
 
     public ImmutableRecords(String users, String stations, boolean initRec, RecServiceGrpc.RecServiceBlockingStub stub) throws FileNotFoundException {
-        importUsers(users);
+        importUsers(users, initRec, stub);
         importStations(stations, initRec, stub);
     }
 
-    private void importUsers(String usersFilename) throws FileNotFoundException {
+    public List<Station> getStations() {
+        return stations;
+    }
+
+    private void importUsers(String usersFilename, boolean initRec, RecServiceGrpc.RecServiceBlockingStub stub) throws FileNotFoundException {
         String path = "src/main/java/pt/tecnico/bicloin/hub/" + usersFilename;
         Scanner scanner = new Scanner(new File(path));
         while(scanner.hasNext()) {
@@ -43,6 +48,9 @@ public class ImmutableRecords {
             String name = args[1];
             String phoneNumber = args[2];
             users.add(new User(id, name, phoneNumber));
+            if(initRec) {
+                createUserRecords(id, stub); 
+            }
         }
         scanner.close();
     }
@@ -70,6 +78,22 @@ public class ImmutableRecords {
             }
         }
         scanner.close();
+    }
+
+    public void createUserRecords(String abrev, RecServiceGrpc.RecServiceBlockingStub stub) {
+        String isBikedUpRegisterName = "bikes-" + abrev;
+        
+        IsBikedUp isBikedUp = IsBikedUp.newBuilder().setIsBikedUp(false).build();
+        WriteRequest isBikedUpWriteRequest = WriteRequest
+                                        .newBuilder()
+                                        .setRegisterName(isBikedUpRegisterName)
+                                        .setValue(Any.pack(isBikedUp))
+                                        .build();
+        try {
+            stub.write(isBikedUpWriteRequest);
+        } catch(StatusRuntimeException e) {
+            System.out.println("Rec instance is DOWN.\n");
+        }
     }
 
     public void createStationRecords(Integer bikesAvailable, String abrev, RecServiceGrpc.RecServiceBlockingStub stub) {

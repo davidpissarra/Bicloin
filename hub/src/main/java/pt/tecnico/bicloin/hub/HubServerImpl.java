@@ -2,6 +2,8 @@ package pt.tecnico.bicloin.hub;
 
 import pt.tecnico.bicloin.hub.domain.ImmutableRecords;
 import pt.tecnico.bicloin.hub.domain.Station;
+import pt.tecnico.bicloin.hub.domain.StationDistance;
+import pt.tecnico.bicloin.hub.domain.Haversine;
 import io.grpc.Context;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -26,14 +28,11 @@ import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import static io.grpc.Status.INTERNAL;
-import static io.grpc.Status.INVALID_ARGUMENT;
-
-import java.io.File;
+import static io.grpc.Status.FAILED_PRECONDITION;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Scanner;
+import java.util.Collection;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -105,7 +104,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onCompleted();
         
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
         }
     }
 
@@ -173,7 +172,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
         }    
     }
 
@@ -217,7 +216,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
         }    
     }
 
@@ -276,7 +275,114 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
         } 
     }
+
+    @Override
+    public void locateStation(LocateStationRequest request, StreamObserver<LocateStationResponse> responseObserver) {
+        float latitude = request.getLatitude();
+        float longitude = request.getLongitude();
+        Integer nStations = request.getNStations();
+        List<Station> stations =  immutableRecords.getStations();
+
+        List<StationDistance> closestStations = Haversine.getClosestStations(latitude, longitude, stations, nStations);
+
+        List<StationProtoMessage> protoStations = new ArrayList<>();
+
+        
+        closestStations.forEach(stationDistance -> {
+            Station station = immutableRecords.getStation(stationDistance.getAbrev());
+
+            String bikesRegisterName = "bikes-" + station.getAbrev();
+            ReadRequest bikesReadRequest = ReadRequest.newBuilder().setRegisterName(bikesRegisterName).build();
+            try {
+                ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
+                setRec(recRecord);
+                try {
+                    ReadResponse bikesReadResponse = recStub.read(bikesReadRequest);
+                    
+                    if(Context.current().isCancelled()) {
+                        return;
+                    }
+                    StationProtoMessage message = StationProtoMessage
+                                                    .newBuilder()
+                                                    .setAbrev(station.getAbrev())
+                                                    .setLatitude(station.getLatitude())
+                                                    .setLongitude(station.getLongitude())
+                                                    .setDocks(station.getDocks())
+                                                    .setReward(station.getReward())
+                                                    .setBikes(bikesReadResponse.getRegisterValue().unpack(Bikes.class).getBikes())
+                                                    .setDistance(stationDistance.getDistance())
+                                                    .build();
+                    protoStations.add(message);
+                } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+                    System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
+                }
+            } catch(ZKNamingException e) {
+                responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
+            }                              
+        });
+
+        LocateStationResponse response = LocateStationResponse
+                                            .newBuilder()
+                                            .addAllStations(protoStations)
+                                            .build();
+        
+        if(Context.current().isCancelled()) {
+            return;
+        }
+
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void bikeUp(BikeUpRequest request, StreamObserver<BikeUpResponse> responseObserver) {
+        String username = request.getUsername();
+        float userLatitude = request.getUserLatitude();
+        float userLongitude = request.getUserLongitude();
+        String stationAbrev = request.getStationId();
+        Station station = immutableRecords.getStation(stationAbrev);
+        
+        if(!Haversine.inRangeStation(userLatitude, userLongitude, station.getLatitude(), station.getLongitude())) {
+            responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO fora de alcance.").asRuntimeException());
+        }
+
+        String bikesRegisterName = "bikes-" + station.getAbrev();
+        String isBikedUpRegisterName = "is-biked-up-" + username;
+        ReadRequest bikesReadRequest = ReadRequest.newBuilder().setRegisterName(bikesRegisterName).build();
+        ReadRequest isBikedUpReadRequest = ReadRequest.newBuilder().setRegisterName(isBikedUpRegisterName).build();
+        try {
+            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
+            setRec(recRecord);
+            try {
+                ReadResponse bikesReadResponse = recStub.read(bikesReadRequest);
+                ReadResponse isBikedUpReadResponse = recStub.read(isBikedUpReadRequest);
+
+                if(bikesReadResponse.getRegisterValue().unpack(Bikes.class).getBikes() == 0) {
+                    responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO estação sem bicicletas disponíveis.").asRuntimeException());
+                }
+                if(isBikedUpReadResponse.getRegisterValue().unpack(IsBikedUp.class).getIsBikedUp() == true) {
+                    responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO utilizador já tem uma bicicleta levantada.").asRuntimeException());
+                }
+                
+                if(Context.current().isCancelled()) {
+                    return;
+                }
+                
+                //TODO
+
+                BikeUpResponse response = BikeUpResponse.newBuilder().build();
+                responseObserver.onNext(response);
+                responseObserver.onCompleted();
+                
+            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+                System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
+            }
+        } catch(ZKNamingException e) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
+        }
+    }
+
 }

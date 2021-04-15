@@ -31,12 +31,11 @@ public class AppMain {
 		final String zooHost = args[0];
 		final String zooPort = args[1];
 		try {
-			User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
 			
-			App app = new App(zooHost, zooPort);
+			App app = new App(zooHost, zooPort, new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5])));
 			
 			if(args.length == 6) {
-				readCommands(System.in, app, user);
+				readCommands(System.in, app);
 			}
 			
 			if(args.length == 7) {
@@ -48,21 +47,21 @@ public class AppMain {
 		}
 	}
 
-	private static void readCommands(InputStream inputStream, App app, User user) {
+	private static void readCommands(InputStream inputStream, App app) {
 		try (Scanner scanner = new Scanner(inputStream)) {
 			while(true) {
 				String command = scanner.nextLine();
 
 				if(command.equals("ping")) {
-					printResponse( app.ping(), user );
+					app.ping();
 				}
 				
 				else if(command.equals("sys-status")) {
-					printResponse( app.sysStatus(), user );
+					app.sysStatus();
 				}
 
 				else if(command.equals("balance")) {
-					printResponse( app.balance(user), user );
+					app.balance();
 				}
 
 				else if(command.contains("top-up")) {
@@ -73,7 +72,7 @@ public class AppMain {
 					}
 					Integer value = Integer.parseInt(tokens[1]);
 					if(value >= 1 && value <= 20) {
-						printResponse( app.topUp(value, user), user );
+						app.topUp(value);
 					}
 					else {
 						System.out.println("Carregamento deve ser entre 1 e 20 Euros.");
@@ -85,7 +84,8 @@ public class AppMain {
 						System.out.println("Comando não encontrado.");
 						continue;
 					}
-					printResponse( app.infoStation(tokens[1]), user );
+					String abrev = tokens[1];
+					app.infoStation(abrev);
 				}
 				else if(command.contains("tag")) {
 					String[] tokens = command.split(" ");
@@ -102,17 +102,29 @@ public class AppMain {
 					String[] tokens = command.split(" ");
 					if(tokens.length == 2) {
 						String tagName = tokens[1];
-						app.move(tagName, user);
+						app.move(tagName);
 					}
 					else if(tokens.length == 3){
 						float latitude = Float.parseFloat(tokens[1]);
 						float longitude = Float.parseFloat(tokens[2]);
-						app.move(latitude, longitude, user);
+						app.move(latitude, longitude);
 					}
 					else {
 						System.out.println("Comando não encontrado.");
 						continue;
 					}
+				}
+				else if(command.equals("at")) {
+					app.at();
+				}
+				else if(command.contains("scan")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length != 2) {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
+					Integer nStations = Integer.parseInt(tokens[1]);
+					app.scan(nStations);
 				}
 				else if(command.contains("bike-up")) {
 					String[] tokens = command.split(" ");
@@ -120,7 +132,8 @@ public class AppMain {
 						System.out.println("Comando não encontrado.");
 						continue;
 					}
-					//printResponse( app.bikeUp(tokens[1]), user );
+					String abrev = tokens[1];
+					app.bikeUp(abrev);
 				}
 				else if(command.contains("bike-down")) {
 					String[] tokens = command.split(" ");
@@ -128,46 +141,13 @@ public class AppMain {
 						System.out.println("Comando não encontrado.");
 						continue;
 					}
-					//printResponse( app.bikeDown(tokens[1]), user );
+					String abrev = tokens[1];
+					app.bikeDown(abrev);
 				}
 				else {
 					System.out.println("Comando não encontrado.");
 				}
 			}
-		}
-	}
-
-	private static void printResponse(Message message, User user) {
-		if(message instanceof PingResponse) {
-			PingResponse pingResponse = (PingResponse) message;
-			System.out.println(pingResponse.getOutput());
-		}
-		else if(message instanceof SysStatusResponse) {
-			SysStatusResponse sysStatusResponse = (SysStatusResponse) message;
-			System.out.println(sysStatusResponse.getOutput());
-		}
-		else if(message instanceof BalanceResponse) {
-			BalanceResponse balanceResponse = (BalanceResponse) message;
-			System.out.println(user.getId() + " " + balanceResponse.getBalance() + " BIC");
-		}
-		else if(message instanceof TopUpResponse) {
-			TopUpResponse topUpResponse = (TopUpResponse) message;
-			System.out.println(user.getId() + " " + topUpResponse.getBalance() + " BIC");
-		}
-		else if(message instanceof InfoStationResponse) {
-			InfoStationResponse infoStationResponse = (InfoStationResponse) message;
-			String output = infoStationResponse.getName() + ", "
-								+ "lat " + infoStationResponse.getLatitude() + ", "
-								+ infoStationResponse.getLongitude() + " long, "
-								+ infoStationResponse.getDocks() + " docas, "
-								+ infoStationResponse.getReward() + " BIC prémio, "
-								+ infoStationResponse.getBikes() + " bicicletas, "
-								+ infoStationResponse.getBikeUpStats() + " levantamentos, "
-								+ infoStationResponse.getBikeDownStats() + " devoluções, "
-								+ "https://www.google.com/maps/place/"
-								+ infoStationResponse.getLatitude() + ","
-								+ infoStationResponse.getLongitude();
-			System.out.println(output);
 		}
 	}
 
