@@ -1,8 +1,8 @@
 package pt.tecnico.bicloin.app;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
@@ -10,17 +10,22 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.grpc.Hub.*;
+import pt.tecnico.bicloin.app.domain.Tag;
 import pt.tecnico.bicloin.app.domain.User;
 import pt.tecnico.bicloin.hub.grpc.HubServiceGrpc;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
+import pt.tecnico.bicloin.app.domain.exception.InvalidLocationException;
+import pt.tecnico.bicloin.app.domain.exception.InvalidUserException;
+
 public class App implements AutoCloseable {
     private ManagedChannel channel = null;
     private HubServiceGrpc.HubServiceBlockingStub stub = null;
     private ZKNaming zkNaming;
     private int timeoutDelay = 2; //seconds
+    private Map<String, Tag> tags = new HashMap<>();
 
     public App(String zooHost, String zooPort) throws ZKNamingException {
         zkNaming = new ZKNaming(zooHost, zooPort);
@@ -38,6 +43,38 @@ public class App implements AutoCloseable {
 		return Integer.valueOf(path.substring(lastSlashIndex + 1));
     }
 
+    public void tag(float latitude, float longitude, String tagName) {
+        try {
+            this.tags.put(tagName, new Tag(latitude, longitude));
+            System.out.println("OK");
+        } catch(InvalidLocationException e) {
+            System.out.println("ERRO " + e.getMessage());
+        }
+    }
+
+    public void move(String tagName, User user) {
+        if(tags.containsKey(tagName)) {
+            try {
+                Tag tag = tags.get(tagName);
+                user.setLocation(tag.getLatitude(), tag.getLongitude());
+                System.out.println("OK");
+            } catch(InvalidUserException e) {
+                System.out.println("ERRO " + e.getMessage());
+            }
+        }
+        else {
+            System.out.println("ERRO tag não encontrada");
+        }
+    }
+
+    public void move(float latitude, float longitude, User user) {
+        try {
+            user.setLocation(latitude, longitude);
+            System.out.println("OK");
+        } catch(InvalidUserException e) {
+            System.out.println("ERRO " + e.getMessage());
+        }
+    }
 
     public PingResponse ping() {
         PingRequest pingRequest = PingRequest.newBuilder().build();
@@ -114,6 +151,9 @@ public class App implements AutoCloseable {
                     else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
                         System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
                     }
+                    else {
+                        System.out.println(e.getStatus().getDescription());
+                    }
                 }
             }
         } catch (ZKNamingException e) {
@@ -142,6 +182,9 @@ public class App implements AutoCloseable {
                     }
                     else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
                         System.out.println("Hub instance number " + getInstanceNumber(record) + " is DOWN! Retrying to another hub.");
+                    }
+                    else {
+                        System.out.println(e.getStatus().getDescription());
                     }
                 }
             }
@@ -186,3 +229,4 @@ public class App implements AutoCloseable {
         channel.shutdown();
     }
 }
+

@@ -31,7 +31,7 @@ public class AppMain {
 		final String zooHost = args[0];
 		final String zooPort = args[1];
 		try {
-			final User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
+			User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
 			
 			App app = new App(zooHost, zooPort);
 			
@@ -93,7 +93,26 @@ public class AppMain {
 						System.out.println("Comando não encontrado.");
 						continue;
 					}
-					//printResponse( app.tag(tokens[1]), user );
+					float latitude = Float.parseFloat(tokens[1]);
+					float longitude = Float.parseFloat(tokens[2]);
+					String tagName = tokens[3];
+					app.tag(latitude, longitude, tagName);
+				}
+				else if(command.contains("move")) {
+					String[] tokens = command.split(" ");
+					if(tokens.length == 2) {
+						String tagName = tokens[1];
+						app.move(tagName, user);
+					}
+					else if(tokens.length == 3){
+						float latitude = Float.parseFloat(tokens[1]);
+						float longitude = Float.parseFloat(tokens[2]);
+						app.move(latitude, longitude, user);
+					}
+					else {
+						System.out.println("Comando não encontrado.");
+						continue;
+					}
 				}
 				else if(command.contains("bike-up")) {
 					String[] tokens = command.split(" ");

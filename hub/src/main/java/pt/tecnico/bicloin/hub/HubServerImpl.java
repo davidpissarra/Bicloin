@@ -105,7 +105,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onCompleted();
         
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Internal error.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
         }
     }
 
@@ -148,7 +148,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     public void balance(BalanceRequest request, StreamObserver<BalanceResponse> responseObserver) {
         String username = request.getUsername();
         if(!immutableRecords.existsUser(username)) {
-            responseObserver.onError(INTERNAL.withDescription("Inexistent user.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Utilizador inexistente.").asRuntimeException());
             return;
         }
 
@@ -173,7 +173,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Internal error.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
         }    
     }
 
@@ -182,7 +182,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         String username = topUpRequest.getUsername();
         String phoneNumber = topUpRequest.getPhone();
         if(!immutableRecords.existsUser(username, phoneNumber)) {
-            responseObserver.onError(INTERNAL.withDescription("Inexistent user.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Utilizador inexistente.").asRuntimeException());
             return;
         }
 
@@ -217,7 +217,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Internal error.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
         }    
     }
 
@@ -225,7 +225,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     public void infoStation(InfoStationRequest request, StreamObserver<InfoStationResponse> responseObserver) {
         String stationId = request.getStationId();
         if(!immutableRecords.existsStation(stationId)) {
-            responseObserver.onError(INTERNAL.withDescription("Inexistent station.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Estação inexistente.").asRuntimeException());
             return;
         }
         Station station = immutableRecords.getStation(stationId);
@@ -276,7 +276,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
         } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("Internal error.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("Erro interno.").asRuntimeException());
         } 
     }
 }

@@ -20,8 +20,8 @@
 		<zoo.host>localhost</zoo.host>
 		<zoo.port>2181</zoo.port>
 
-		<user.id>jorgedavidpedro</user.id>
-		<user.phoneNumber>+351961234567</user.phoneNumber>
+		<user.id>alice</user.id>
+		<user.phoneNumber>+35191102030</user.phoneNumber>
 		<user.latitude>38.7380</user.latitude>
 		<user.longitude>-9.3000</user.longitude>
 	</properties>

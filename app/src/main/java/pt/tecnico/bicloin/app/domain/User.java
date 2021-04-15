@@ -8,7 +8,7 @@ public class User {
 
     private String id;
     private String phoneNumber;
-    private float latitute;
+    private float latitude;
     private float longitude;
     
     public User(String id, String phoneNumber, float latitude, float longitude){
@@ -44,7 +44,7 @@ public class User {
     }
 
     public float getLatitude() {
-        return latitute;
+        return latitude;
     }
 
     public float getLongitude() {
@@ -58,7 +58,7 @@ public class User {
         if(!(longitude >= -90 && longitude <= 90)) {
             throw new InvalidUserException(INVALID_LONGITUDE);
         }
-        this.latitute = latitude;
+        this.latitude = latitude;
         this.longitude = longitude;
     }
 
