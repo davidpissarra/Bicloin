@@ -4,14 +4,14 @@ import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
 
 import static pt.tecnico.bicloin.hub.domain.exception.ErrorMessage.*;
 
-public class User {
+public class AppUser {
 
     private String id;
     private String phoneNumber;
     private float latitude;
     private float longitude;
     
-    public User(String id, String phoneNumber, float latitude, float longitude){
+    public AppUser(String id, String phoneNumber, float latitude, float longitude){
         setId(id);
         setPhoneNumber(phoneNumber);
         setLocation(latitude, longitude);

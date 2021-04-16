@@ -63,7 +63,6 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void ping(Hub.PingRequest request, StreamObserver<Hub.PingResponse> responseObserver) {
-        System.out.println(instance);
         String output = "Hub instance number " + getHubInstance() + " is UP.";
         Hub.PingResponse response = Hub.PingResponse.newBuilder().setOutput(output).build();
 

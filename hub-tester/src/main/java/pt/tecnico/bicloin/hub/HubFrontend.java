@@ -22,7 +22,7 @@ import com.google.protobuf.Message;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.domain.Tag;
-import pt.tecnico.bicloin.hub.domain.User;
+import pt.tecnico.bicloin.hub.domain.AppUser;
 
 import pt.tecnico.bicloin.hub.domain.exception.InvalidLocationException;
 import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
@@ -34,9 +34,9 @@ public class HubFrontend implements AutoCloseable {
     private ZKNaming zkNaming;
     private int timeoutDelay = 2; //seconds
     private Map<String, Tag> tags = new HashMap<>();
-    private User user;
+    private AppUser user;
 
-    public HubFrontend(ZKNaming zkNaming, User user) throws ZKNamingException {
+    public HubFrontend(ZKNaming zkNaming, AppUser user) throws ZKNamingException {
         this.zkNaming = zkNaming;
         this.user = user;
     }
@@ -69,13 +69,8 @@ public class HubFrontend implements AutoCloseable {
 
     public String move(String tagName) {
         if(tags.containsKey(tagName)) {
-            try {
-                Tag tag = tags.get(tagName);
-                user.setLocation(tag.getLatitude(), tag.getLongitude());
-                return "OK";
-            } catch(InvalidUserException e) {
-                return "ERRO " + e.getMessage();
-            }
+            Tag tag = tags.get(tagName);
+            return move(tag.getLatitude(), tag.getLongitude());
         }
         else {
             return "ERRO tag não encontrada";
@@ -85,7 +80,9 @@ public class HubFrontend implements AutoCloseable {
     public String move(float latitude, float longitude) {
         try {
             user.setLocation(latitude, longitude);
-            return "OK";
+            return user.getId()
+                    + " em " + "https://www.google.com/maps/place/"
+                    + user.getLatitude() + "," + user.getLongitude();
         } catch(InvalidUserException e) {
             return "ERRO " + e.getMessage();
         }

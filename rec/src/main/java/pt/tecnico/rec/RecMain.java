@@ -19,10 +19,8 @@ public class RecMain {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		// check arguments TODO insufficient  parsing
 		if (args.length < 5) {
 			System.err.println("Argument(s) missing!");
-			//System.err.printf("Usage: java %s port%n", TTTServer.class.getName());
 			return;
 		}
 

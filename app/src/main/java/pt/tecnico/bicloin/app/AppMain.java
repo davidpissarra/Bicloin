@@ -1,7 +1,5 @@
 package pt.tecnico.bicloin.app;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
@@ -9,7 +7,7 @@ import java.util.concurrent.TimeUnit;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 import pt.tecnico.bicloin.hub.HubFrontend;
-import pt.tecnico.bicloin.hub.domain.User;
+import pt.tecnico.bicloin.hub.domain.AppUser;
 import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
 
 public class AppMain {
@@ -30,7 +28,7 @@ public class AppMain {
 
 		final String zooHost = args[0];
 		final String zooPort = args[1];
-		User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
+		AppUser user = new AppUser(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
 			HubFrontend frontend = new HubFrontend(zkNaming, user);
@@ -38,38 +36,19 @@ public class AppMain {
 			if(args.length == 6) {
 				readCommands(System.in, frontend);
 			}
-			
-			if(args.length == 7) {
-				String path = "./src/main/java/pt/tecnico/bicloin/app/" + args[6];
-				readCommands(path, frontend);
-			}
 		} catch(InvalidUserException e) {
 			System.out.println(e.getMessage());
 			return;
 		}
 	}
 
-	private static void readCommands(String path, HubFrontend frontend) {
-		try {
-			File file = new File(path);
-			Scanner scanner = new Scanner(file);
-			readCommands(scanner, frontend);
-			scanner.close();
-		} catch (FileNotFoundException e) {
-			System.out.println(e.getMessage());
-		}
-	}
-
 	private static void readCommands(InputStream inputStream, HubFrontend frontend) {
 		Scanner scanner = new Scanner(inputStream);
-		readCommands(scanner, frontend);
-		scanner.close();
-	}
-
-	private static void readCommands(Scanner scanner, HubFrontend frontend) {
+		System.out.print("> ");
 		while(scanner.hasNext()) {
 			String command = scanner.nextLine();
 			if(command.startsWith("#") || command.equals("")) {
+				System.out.print("> ");
 				continue;
 			}
 			
@@ -99,9 +78,19 @@ public class AppMain {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
-				Integer value = Integer.parseInt(tokens[1]);
+				Integer value;
+				if(!isNumeric(tokens[1])) {
+					System.out.println("ERRO argumento.");
+					System.out.print("> ");
+					continue;
+				}
+				else {
+					value = Integer.parseInt(tokens[1]);
+				}
+
 				if(value >= 1 && value <= 20) {
 					System.out.println(frontend.topUp(value));
 				}
@@ -113,6 +102,7 @@ public class AppMain {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
 				String abrev = tokens[1];
@@ -122,10 +112,28 @@ public class AppMain {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 4) {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
-				float latitude = Float.parseFloat(tokens[1]);
-				float longitude = Float.parseFloat(tokens[2]);
+				float latitude;
+				if(!isFloat(tokens[1])) {
+					System.out.println("ERRO argumento.");
+					System.out.print("> ");
+					continue;
+				}
+				else {
+					latitude = Float.parseFloat(tokens[1]);
+				}
+				float longitude;
+				if(!isFloat(tokens[2])) {
+					System.out.println("ERRO argumento.");
+					System.out.print("> ");
+					continue;
+				}
+				else {
+					longitude = Float.parseFloat(tokens[2]);
+				}
+				
 				String tagName = tokens[3];
 				System.out.println(frontend.tag(latitude, longitude, tagName));
 			}
@@ -136,12 +144,29 @@ public class AppMain {
 					System.out.println(frontend.move(tagName));
 				}
 				else if(tokens.length == 3){
-					float latitude = Float.parseFloat(tokens[1]);
-					float longitude = Float.parseFloat(tokens[2]);
+					float latitude;
+					if(!isFloat(tokens[1])) {
+						System.out.println("ERRO argumento.");
+						System.out.print("> ");
+						continue;
+					}
+					else {
+						latitude = Float.parseFloat(tokens[1]);
+					}
+					float longitude;
+					if(!isFloat(tokens[2])) {
+						System.out.println("ERRO argumento.");
+						System.out.print("> ");
+						continue;
+					}
+					else {
+						longitude = Float.parseFloat(tokens[2]);
+					}
 					System.out.println(frontend.move(latitude, longitude));
 				}
 				else {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
 			}
@@ -152,15 +177,25 @@ public class AppMain {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
-				Integer nStations = Integer.parseInt(tokens[1]);
+				Integer nStations;
+				if(!isNumeric(tokens[1])) {
+					System.out.println("ERRO argumento.");
+					System.out.print("> ");
+					continue;
+				}
+				else {
+					nStations = Integer.parseInt(tokens[1]);
+				}
 				System.out.println(frontend.scan(nStations));
 			}
 			else if(command.startsWith("bike-up")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
 				String abrev = tokens[1];
@@ -170,6 +205,7 @@ public class AppMain {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
 					System.out.println("Comando não encontrado.");
+					System.out.print("> ");
 					continue;
 				}
 				String abrev = tokens[1];
@@ -189,7 +225,17 @@ public class AppMain {
 			else {
 				System.out.println("Comando não encontrado.");
 			}
+			System.out.print("> ");
 		}
+		scanner.close();
 	}
+
+	private static boolean isNumeric(String s) {
+        return s != null && s.matches("^[0-9+]*$");
+    }
+
+	private static boolean isFloat(String s) {
+		return s != null && s.matches("^[-+]?[0-9]*.?[0-9]+$");
+    }
 
 }

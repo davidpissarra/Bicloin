@@ -1,7 +1,7 @@
 package pt.tecnico.bicloin.hub;
 
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.bicloin.hub.domain.User;
+import pt.tecnico.bicloin.hub.domain.AppUser;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
@@ -18,7 +18,7 @@ public class HubTester {
 
 		String zooHost = args[0];
 		String zooPort = args[1];
-		User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
+		AppUser user = new AppUser(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
 
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);

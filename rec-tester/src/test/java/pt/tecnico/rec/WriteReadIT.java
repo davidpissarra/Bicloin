@@ -3,8 +3,6 @@ package pt.tecnico.rec;
 import org.junit.jupiter.api.*;
 
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.rec.grpc.Rec.*;
-import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

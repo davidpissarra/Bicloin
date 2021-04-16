@@ -3,8 +3,6 @@ package pt.tecnico.rec;
 import java.io.IOException;
 
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.rec.grpc.Rec.PingRequest;
-import pt.tecnico.rec.grpc.Rec.PingResponse;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
@@ -25,7 +23,7 @@ public class RecTester {
 		
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
-			RecFrontend frontend = new RecFrontend(zkNaming, "/grpc/bicloin/rec/1");
+			RecFrontend frontend = new RecFrontend(zkNaming, path);
 			
 			String output = frontend.ping();
 			System.out.println(output);

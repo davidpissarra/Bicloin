@@ -3,19 +3,12 @@ package pt.tecnico.bicloin.hub.domain;
 import java.util.List;
 import java.util.Scanner;
 
-import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.domain.exception.ErrorMessage;
 import pt.tecnico.bicloin.hub.domain.exception.InvalidStationException;
 import pt.tecnico.rec.RecFrontend;
-import pt.tecnico.rec.grpc.RecServiceGrpc;
-import pt.tecnico.rec.grpc.Rec.BikeDownStats;
-import pt.tecnico.rec.grpc.Rec.BikeUpStats;
-import pt.tecnico.rec.grpc.Rec.Bikes;
-import pt.tecnico.rec.grpc.Rec.IsBikedUp;
-import pt.tecnico.rec.grpc.Rec.WriteRequest;
 
 import java.io.File;
 import java.io.FileNotFoundException;
