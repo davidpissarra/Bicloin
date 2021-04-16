@@ -5,7 +5,6 @@
 
 Group A59
 
-
 ## About
 
 This library module contains protocol buffers (protobuf) definitions for a specific server.

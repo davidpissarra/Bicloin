@@ -13,19 +13,6 @@ Distributed Systems 2020-2021, 2nd semester project
 
 92426 [António Branco](pedro.paredes.branco@tecnico.ulisboa.pt)
 
-### Module leaders
-
-For each module, the README file must identify the lead developer and the contributors.
-The leads should be evenly divided among the group members.
-
-### Code identification
-
-In all the source files (including POMs), please replace __CXX__ with your group identifier.  
-The group identifier is composed by Campus - A (Alameda) or T (Tagus) - and number - always with two digits.
-
-This change is important for code dependency management, to make sure that your code runs using the correct components and not someone else's.
-
-
 ## Getting Started
 
 The overall system is composed of multiple modules.

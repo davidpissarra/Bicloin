@@ -5,21 +5,15 @@
 
 Group A59
 
-*(fill-in line above with group identifier e.g. A07 or T22; and then delete this line)*
-
 ### Lead developer 
 
-... ... ...
-
-*(fill-in line above with student number, name, and @GitHub identity of module leader; and then delete this line)*
+92426 António Branco https://git.rnl.tecnico.ulisboa.pt/ist192426
 
 ### Contributors
 
-... ... ...
+92448 David Pissarra https://git.rnl.tecnico.ulisboa.pt/ist192448 
 
-... ... ...
-
-*(fill-in lines above with student number, name, and @GitHub identity of module contributors; and then delete this line)*
+92502 Jorge Godinho https://git.rnl.tecnico.ulisboa.pt/ist192502
 
 
 ## About
