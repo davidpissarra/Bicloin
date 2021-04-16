@@ -1,0 +1,41 @@
+
+Comandos:
+
+ping
+    - Dá sinal de vida de um hub.
+
+sys-status
+    - Apresenta o estado do servidor.
+
+balance
+    - Apresenta o saldo do utilizador em Bicloins.
+
+top-up [montante]
+    - Efetua um carregamento com o montante introduzido em Euros (1 Euro = 10 Bicloins).
+
+tag [latitude] [longitude] [nome]
+    - Associa um nome a uma certa localização.
+
+at
+    - Apresenta a localização atual do utilizador.
+
+scan [n]
+    - Listar as n estações mais próximas do utilizador.
+    
+info [abreviatura]
+    - Apresenta informação sobre a estação com a abreviatura introduzida.
+
+move [tag]
+    - Move o utilizador para uma certa localização dada pela tag.
+
+move [latitude] [longitude]
+    - Move o utilizador para uma certa localização dada pela latitude e longitude.
+
+bike-up [abreviatura]
+    - Levanta uma bicicleta da estação com a abreviatura dada.
+
+bike-down [abreviatura]
+    - Devolve uma bicicleta na estação com a abreviatura dada.
+
+quit | exit
+    - Termina a aplicação.

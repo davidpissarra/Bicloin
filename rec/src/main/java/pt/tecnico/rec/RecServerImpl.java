@@ -9,6 +9,7 @@ import pt.tecnico.rec.grpc.RecServiceGrpc;
 import pt.tecnico.rec.grpc.Rec.*;
 
 import static io.grpc.Status.INTERNAL;
+import static io.grpc.Status.INVALID_ARGUMENT;;
 
 public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
 
@@ -52,6 +53,11 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
 			Any value = Any.pack(bikeDownStats);
             return ReadResponse.newBuilder().setRegisterValue(value).build();
         }
+        else if(type.equals("isBikedUp")) {
+            IsBikedUp isBikedUp = IsBikedUp.newBuilder().setIsBikedUp(records.readIsUserBikedUp(registerName)).build();
+			Any value = Any.pack(isBikedUp);
+            return ReadResponse.newBuilder().setRegisterValue(value).build();
+        }
 
         return null;
     }
@@ -79,7 +85,6 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
             }
         }
-
         else if(type.equals("bikes")) {
             try {
                 Integer bikes = request.getValue().unpack(Bikes.class).getBikes();
@@ -89,7 +94,6 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
             }
         }
-
         else if(type.equals("bikeUpStats")) {
             try {
                 Integer bikeUpStats = request.getValue().unpack(BikeUpStats.class).getBikeUpStats();
@@ -99,7 +103,6 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
             }
         }
-        
         else if(type.equals("bikeDownStats")) {
             try {
                 Integer bikeDownStats = request.getValue().unpack(BikeDownStats.class).getBikeDownStats();
@@ -108,6 +111,18 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
             }
+        }
+        else if(type.equals("isBikedUp")) {
+            try {
+                Boolean isBikedUp = request.getValue().unpack(IsBikedUp.class).getIsBikedUp();
+                records.writeIsUserBikedUp(registerName, isBikedUp);
+                return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
+            } catch (InvalidProtocolBufferException e) {
+                responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
+            }
+        }
+        else {
+            responseObserver.onError(INVALID_ARGUMENT.withDescription("Tipo de registo não conhecido.").asRuntimeException());
         }
 
         return null;
@@ -118,6 +133,14 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         String registerName = request.getRegisterName(); // balance-username / bikes-abrev / ...
 
         WriteResponse response = setValue(registerName, request, responseObserver);
+        responseObserver.onNext(response);
+		responseObserver.onCompleted();
+    }
+
+    @Override
+    public void clean(CleanRequest request, StreamObserver<CleanResponse> responseObserver) {
+        records.cleanRecords();
+        CleanResponse response = CleanResponse.newBuilder().build();
         responseObserver.onNext(response);
 		responseObserver.onCompleted();
     }

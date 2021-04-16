@@ -1,8 +1,8 @@
-package pt.tecnico.bicloin.app.domain;
+package pt.tecnico.bicloin.hub.domain;
 
-import pt.tecnico.bicloin.app.domain.exception.InvalidUserException;
+import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
 
-import static pt.tecnico.bicloin.app.domain.exception.ErrorMessage.*;
+import static pt.tecnico.bicloin.hub.domain.exception.ErrorMessage.*;
 
 public class User {
 

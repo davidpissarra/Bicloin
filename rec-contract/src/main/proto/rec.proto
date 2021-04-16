@@ -44,8 +44,17 @@ message WriteResponse {
   google.protobuf.Any registerValue = 1;
 }
 
+message CleanRequest {
+  // no arguments
+}
+
+message CleanResponse {
+  // no arguments
+}
+
 service RecService {
   rpc ping(PingRequest) returns (PingResponse);
   rpc read(ReadRequest) returns (ReadResponse);
   rpc write(WriteRequest) returns (WriteResponse);
+  rpc clean(CleanRequest) returns (CleanResponse);
 }

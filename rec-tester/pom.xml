@@ -17,7 +17,7 @@
 	<properties>
 		<!-- see parent POM for more properties -->
 
-		<mainclass>pt.tecnico.rec.RecordTester</mainclass>
+		<mainclass>pt.tecnico.rec.RecTester</mainclass>
 
 		<zoo.host>localhost</zoo.host>
 		<zoo.port>2181</zoo.port>
@@ -31,6 +31,11 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>rec-contract</artifactId>
+			<version>1.0.0-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>rec</artifactId>
 			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
 		<!-- JUnit is a unit testing framework for the Java programming language. -->

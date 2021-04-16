@@ -1,11 +1,16 @@
 package pt.tecnico.rec;
 
+import java.io.IOException;
+
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.rec.grpc.Rec.*;
+import pt.tecnico.rec.grpc.Rec.PingRequest;
+import pt.tecnico.rec.grpc.Rec.PingResponse;
+import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
+import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class RecTester {
 	
-	public static void main(String[] args) {
+	public static void main(String[] args) throws ZKNamingException, IOException, InterruptedException {
 		System.out.println(RecTester.class.getSimpleName());
 		
 		// receive and print arguments
@@ -14,21 +19,22 @@ public class RecTester {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		String zooHost = args[0];
-		String zooPort = args[1];
-		String path = args[2];
-
-		try (RecFrontend frontend = new RecFrontend(zooHost, zooPort, path)) {
-			PingRequest pingRequest = PingRequest.newBuilder().build();
-			PingResponse pingResponse = frontend.ping(pingRequest);
-			System.out.println(pingResponse);
-
-
-
+		final String zooHost = args[0];
+		final String zooPort = args[1];
+		final String path = args[2];
+		
+		try {
+			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
+			RecFrontend frontend = new RecFrontend(zkNaming, "/grpc/bicloin/rec/1");
+			
+			String output = frontend.ping();
+			System.out.println(output);
+			frontend.close();
 		} catch (StatusRuntimeException e) {
-			System.out.println("Caught exception with description: " + e.getStatus().getDescription());
-		} catch(Exception e) {
-			System.out.println("Caught exception with description: " + e.getMessage());
+			System.out.println("Caught exception with description: " +
+					e.getStatus().getDescription());
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
 		}
 	}
 	

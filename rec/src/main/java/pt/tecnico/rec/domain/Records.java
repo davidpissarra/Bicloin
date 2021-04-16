@@ -10,38 +10,54 @@ public class Records {
     private Map<String, Integer> bikeDownStats = new HashMap<>();
     private Map<String, Boolean> isUserBikedUp = new HashMap<>();
 
-    public Integer readBalance(String registerName) {
+    public synchronized Integer readBalance(String registerName) {
         if(!balances.containsKey(registerName)) {
             writeBalance(registerName, 0);
         }
         return balances.get(registerName);
     }
     
-    public void writeBalance(String registerName, Integer balance) {
+    public synchronized void writeBalance(String registerName, Integer balance) {
         balances.put(registerName, balance);
     }
 
-    public Integer readBikes(String registerName) {
+    public synchronized Integer readBikes(String registerName) {
         return bikes.get(registerName);
     }
 
-    public void writeBikes(String registerName, Integer bikes) {
+    public synchronized void writeBikes(String registerName, Integer bikes) {
         this.bikes.put(registerName, bikes);
     }
 
-    public Integer readBikeUpStats(String registerName) {
+    public synchronized Integer readBikeUpStats(String registerName) {
         return bikeUpStats.get(registerName);
     }
 
-    public void writeBikeUpStats(String registerName, Integer bikeUpStats) {
+    public synchronized void writeBikeUpStats(String registerName, Integer bikeUpStats) {
         this.bikeUpStats.put(registerName, bikeUpStats);
     }
     
-    public Integer readBikeDownStats(String registerName) {
+    public synchronized Integer readBikeDownStats(String registerName) {
         return bikeDownStats.get(registerName);
     }
 
-    public void writeBikeDownStats(String registerName, Integer bikeDownStats) {
+    public synchronized void writeBikeDownStats(String registerName, Integer bikeDownStats) {
         this.bikeDownStats.put(registerName, bikeDownStats);
+    }
+
+    public synchronized Boolean readIsUserBikedUp(String registerName) {
+        return isUserBikedUp.get(registerName);
+    }
+
+    public synchronized void writeIsUserBikedUp(String registerName, Boolean isBikedUp) {
+        this.isUserBikedUp.put(registerName, isBikedUp);
+    }
+
+    public synchronized void cleanRecords() {
+        balances.clear();
+        bikes.clear();
+        bikeUpStats.clear();
+        bikeDownStats.clear();
+        isUserBikedUp.clear();
     }
 }

@@ -56,9 +56,11 @@ public class RecMain {
 			// Do not exit the main thread. Wait until server is terminated.
 			server.awaitTermination();
 
+			zkNaming.unbind(path, host, port);
+
 		} finally {
 			if(zkNaming != null) {
-				zkNaming.unbind(path, host, port);
+				
 			}
 		}
 

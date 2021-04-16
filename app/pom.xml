@@ -106,6 +106,7 @@
 						<argument>${user.phoneNumber}</argument>
 						<argument>${user.latitude}</argument>
 						<argument>${user.longitude}</argument>
+						<!--argument>comandos.txt</argument-->
 					</arguments>
 				</configuration>
 			</plugin>

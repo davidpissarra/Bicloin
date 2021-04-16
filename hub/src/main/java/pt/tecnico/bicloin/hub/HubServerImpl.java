@@ -21,6 +21,7 @@ import pt.tecnico.rec.grpc.Rec.ReadRequest;
 import pt.tecnico.rec.grpc.Rec.ReadResponse;
 import pt.tecnico.bicloin.hub.grpc.Hub;
 import pt.tecnico.bicloin.hub.grpc.Hub.*;
+import pt.tecnico.rec.RecFrontend;
 import pt.tecnico.rec.grpc.Rec;
 import pt.tecnico.rec.grpc.Rec.*;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
@@ -39,48 +40,31 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     
-    private Integer instance;
-    private ZKNaming zkNaming;
+    private RecFrontend recFrontend;
+    private HubFrontend hubFrontend;
     private ImmutableRecords immutableRecords;
+    private Integer instance;
 
-    private ManagedChannel channel = null;
-    private HubServiceGrpc.HubServiceBlockingStub hubStub = null;
-    private RecServiceGrpc.RecServiceBlockingStub recStub = null;
-
-    public HubServerImpl(Integer instance, ZKNaming zkNaming, String users, String stations, boolean initRec) throws FileNotFoundException {
+    public HubServerImpl(Integer instance, RecFrontend recFrontend, HubFrontend hubFrontend, String users, String stations, boolean initRec) throws FileNotFoundException {
         super();
         this.instance = instance;
-        this.zkNaming = zkNaming;
-        try {
-            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-            setRec(recRecord);
-            immutableRecords = new ImmutableRecords(users, stations, initRec, recStub);
-        } catch(ZKNamingException e) {
-            System.out.println(e.getMessage());
-        }    
+        this.recFrontend = recFrontend;
+        this.hubFrontend = hubFrontend;
+        immutableRecords = new ImmutableRecords(users, stations, initRec, recFrontend);
     }
 
-    private void setHub(ZKRecord record) {
-        String target = record.getURI();
-        this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        this.hubStub = HubServiceGrpc.newBlockingStub(channel);
+    private Integer getHubInstance() {
+        return instance;
     }
 
-    private void setRec(ZKRecord record) {
-        String target = record.getURI();
-        this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
-        this.recStub = RecServiceGrpc.newBlockingStub(channel);
-    }
-
-    private Integer getInstanceNumber(ZKRecord record) {
-        String path = record.getPath();
-        Integer lastSlashIndex = path.lastIndexOf('/');
-		return Integer.valueOf(path.substring(lastSlashIndex + 1));
+    private Integer getRecInstance() {
+        return recFrontend.getInstance();
     }
 
     @Override
     public void ping(Hub.PingRequest request, StreamObserver<Hub.PingResponse> responseObserver) {
-        String output = "Hub instance number " + instance + " is UP.";
+        System.out.println(instance);
+        String output = "Hub instance number " + getHubInstance() + " is UP.";
         Hub.PingResponse response = Hub.PingResponse.newBuilder().setOutput(output).build();
 
         if(Context.current().isCancelled()) {
@@ -94,8 +78,8 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     @Override
     public void sysStatus(Hub.SysStatusRequest request, StreamObserver<Hub.SysStatusResponse> responseObserver) {
         try {
-            Collection<ZKRecord> recRecords = zkNaming.listRecords("/grpc/bicloin/rec");
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            Collection<ZKRecord> recRecords = recFrontend.getRecRecords();
+            Collection<ZKRecord> hubRecords = recFrontend.getHubRecords();
 
             String output = getOutput(recRecords, hubRecords);
 
@@ -116,28 +100,23 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     }
 
     private String pingRecs(Collection<ZKRecord> recRecords, String output) {
-        Rec.PingRequest recRequest = Rec.PingRequest.newBuilder().build();
         for(ZKRecord rec : recRecords) {
-            setRec(rec);
             try {
-                Rec.PingResponse recResponse = recStub.ping(recRequest);
-                output += recResponse.getOutput() + "\n";
+                recFrontend.setRec(rec);
+                output += recFrontend.ping() + "\n";
             } catch(StatusRuntimeException e) {
-                output += "Rec instance number " + getInstanceNumber(rec) + " is DOWN.\n";
+                output += "ERRO Rec instance number " + getRecInstance() + " is DOWN.\n";
             }
         }
         return output;
     }
 
     private String pingHubs(Collection<ZKRecord> hubRecords, String output) {
-        Hub.PingRequest hubRequest = Hub.PingRequest.newBuilder().build();
         for(ZKRecord hub : hubRecords) {
-            setHub(hub);
             try {
-                Hub.PingResponse hubResponse = hubStub.ping(hubRequest);
-                output += hubResponse.getOutput() + "\n";
+                output += hubFrontend.ping(hub) + "\n";
             } catch(StatusRuntimeException e) {
-                output += "Hub instance number " + getInstanceNumber(hub) + " is DOWN.\n";
+                output += "ERRO Hub instance number " + getHubInstance() + " is DOWN.\n";
             } 
         }
         return output;
@@ -152,131 +131,93 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         }
 
         String registerName = "balance-" + username;
-        ReadRequest readRequest = ReadRequest.newBuilder().setRegisterName(registerName).build();
         try {
-            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-            setRec(recRecord);
-            try {
-                ReadResponse readResponse = recStub.read(readRequest);
-                Integer balance = readResponse.getRegisterValue().unpack(Balance.class).getBalance();
-                BalanceResponse balanceResponse = BalanceResponse.newBuilder().setBalance(balance).build();
+            Integer balance = recFrontend.readBalance(registerName);
+            BalanceResponse balanceResponse = BalanceResponse.newBuilder().setBalance(balance).build();
 
-                if(Context.current().isCancelled()) {
-                    return;
-                }
-
-                responseObserver.onNext(balanceResponse);
-                responseObserver.onCompleted();
+            if(Context.current().isCancelled()) {
                 return;
-            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-                System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
-        } catch(ZKNamingException e) {
+
+            responseObserver.onNext(balanceResponse);
+            responseObserver.onCompleted();
+            return;
+        } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
             responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
-        }    
+        }
     }
 
     @Override
     public void topUp(TopUpRequest topUpRequest, StreamObserver<TopUpResponse> responseObserver) {
         String username = topUpRequest.getUsername();
         String phoneNumber = topUpRequest.getPhone();
+        
         if(!immutableRecords.existsUser(username, phoneNumber)) {
-            responseObserver.onError(INTERNAL.withDescription("Utilizador inexistente.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO Utilizador inexistente.").asRuntimeException());
             return;
         }
 
-        String registerName = "balance-" + topUpRequest.getUsername();
-        ReadRequest readRequest = ReadRequest.newBuilder().setRegisterName(registerName).build();
+        String registerName = "balance-" + username;
         try {
-            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-            setRec(recRecord);
-            try {
-                ReadResponse readResponse = recStub.read(readRequest);
-                Balance balanceMessage = readResponse.getRegisterValue().unpack(Balance.class);
-                balanceMessage = Balance.newBuilder()
-                                    .setBalance(balanceMessage.getBalance() + topUpRequest.getAmount() * 10)
-                                    .build();
-                WriteRequest writeRequest = WriteRequest
-                                                .newBuilder()
-                                                .setRegisterName(registerName)
-                                                .setValue(Any.pack(balanceMessage))
-                                                .build();
-                WriteResponse writeResponse = recStub.write(writeRequest);
-                Integer balance = writeResponse.getRegisterValue().unpack(Balance.class).getBalance();
-                TopUpResponse topUpResponse = TopUpResponse.newBuilder().setBalance(balance).build();
+            Integer currentBalance = recFrontend.readBalance(registerName);
+            Integer topUpBalance = recFrontend.writeBalance(registerName, currentBalance + topUpRequest.getAmount() * 10);
+            TopUpResponse topUpResponse = TopUpResponse.newBuilder().setBalance(topUpBalance).build();
 
-                if(Context.current().isCancelled()) {
-                    return;
-                }
-
-                responseObserver.onNext(topUpResponse);
-                responseObserver.onCompleted();
+            if(Context.current().isCancelled()) {
                 return;
-            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-                System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
-        } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
-        }    
+
+            responseObserver.onNext(topUpResponse);
+            responseObserver.onCompleted();
+            return;
+        } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+        }
     }
 
     @Override
     public void infoStation(InfoStationRequest request, StreamObserver<InfoStationResponse> responseObserver) {
         String stationId = request.getStationId();
         if(!immutableRecords.existsStation(stationId)) {
-            responseObserver.onError(INTERNAL.withDescription("Estação inexistente.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO Estação inexistente.").asRuntimeException());
             return;
         }
         Station station = immutableRecords.getStation(stationId);
         String bikesRegisterName = "bikes-" + stationId;
         String bikeUpStatsRegisterName = "bikeUpStats-" + stationId;
         String bikeDownStatsRegisterName = "bikeDownStats-" + stationId;
-        ReadRequest bikesReadRequest = ReadRequest.newBuilder().setRegisterName(bikesRegisterName).build();
-        ReadRequest bikeUpStatsReadRequest = ReadRequest.newBuilder().setRegisterName(bikeUpStatsRegisterName).build();
-        ReadRequest bikeDownStatsReadRequest = ReadRequest.newBuilder().setRegisterName(bikeDownStatsRegisterName).build();
         try {
-            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-            setRec(recRecord);
-            try {
-                ReadResponse bikesReadResponse = recStub.read(bikesReadRequest);
-                ReadResponse bikeUpStatsReadResponse = recStub.read(bikeUpStatsReadRequest);
-                ReadResponse bikeDownStatsReadResponse = recStub.read(bikeDownStatsReadRequest);
+            String name = station.getName();
+            float latitude = station.getLatitude();
+            float longitude = station.getLongitude();
+            Integer docks = station.getDocks();
+            Integer reward = station.getReward();
+            Integer bikes = recFrontend.readBikes(bikesRegisterName);
+            Integer bikeUpStats = recFrontend.readBikeUpStats(bikeUpStatsRegisterName);
+            Integer bikeDownStats = recFrontend.readBikeDownStats(bikeDownStatsRegisterName);
 
-                String name = station.getName();
-                float latitude = station.getLatitude();
-                float longitude = station.getLongitude();
-                Integer docks = station.getDocks();
-                Integer reward = station.getReward();
-                Integer bikes = bikesReadResponse.getRegisterValue().unpack(Bikes.class).getBikes();
-                Integer bikeUpStats = bikeUpStatsReadResponse.getRegisterValue().unpack(BikeUpStats.class).getBikeUpStats();
-                Integer bikeDownStats = bikeDownStatsReadResponse.getRegisterValue().unpack(BikeDownStats.class).getBikeDownStats();
-
-                
-                InfoStationResponse infoStationResponse = InfoStationResponse
-                                    .newBuilder()
-                                    .setName(name)
-                                    .setLatitude(latitude)
-                                    .setLongitude(longitude)
-                                    .setDocks(docks)
-                                    .setReward(reward)
-                                    .setBikes(bikes)
-                                    .setBikeUpStats(bikeUpStats)
-                                    .setBikeDownStats(bikeDownStats)
-                                    .build();
-                
-                if(Context.current().isCancelled()) {
-                    return;
-                }
-
-                responseObserver.onNext(infoStationResponse);
-                responseObserver.onCompleted();
+            InfoStationResponse infoStationResponse = InfoStationResponse
+                                .newBuilder()
+                                .setName(name)
+                                .setLatitude(latitude)
+                                .setLongitude(longitude)
+                                .setDocks(docks)
+                                .setReward(reward)
+                                .setBikes(bikes)
+                                .setBikeUpStats(bikeUpStats)
+                                .setBikeDownStats(bikeDownStats)
+                                .build();
+            
+            if(Context.current().isCancelled()) {
                 return;
-            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-                System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
             }
-        } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
-        } 
+
+            responseObserver.onNext(infoStationResponse);
+            responseObserver.onCompleted();
+            return;
+        } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+        }
     }
 
     @Override
@@ -295,33 +236,26 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             Station station = immutableRecords.getStation(stationDistance.getAbrev());
 
             String bikesRegisterName = "bikes-" + station.getAbrev();
-            ReadRequest bikesReadRequest = ReadRequest.newBuilder().setRegisterName(bikesRegisterName).build();
             try {
-                ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-                setRec(recRecord);
-                try {
-                    ReadResponse bikesReadResponse = recStub.read(bikesReadRequest);
-                    
-                    if(Context.current().isCancelled()) {
-                        return;
-                    }
-                    StationProtoMessage message = StationProtoMessage
-                                                    .newBuilder()
-                                                    .setAbrev(station.getAbrev())
-                                                    .setLatitude(station.getLatitude())
-                                                    .setLongitude(station.getLongitude())
-                                                    .setDocks(station.getDocks())
-                                                    .setReward(station.getReward())
-                                                    .setBikes(bikesReadResponse.getRegisterValue().unpack(Bikes.class).getBikes())
-                                                    .setDistance(stationDistance.getDistance())
-                                                    .build();
-                    protoStations.add(message);
-                } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-                    System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
+                Integer bikes = recFrontend.readBikes(bikesRegisterName);
+                
+                if(Context.current().isCancelled()) {
+                    return;
                 }
-            } catch(ZKNamingException e) {
-                responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
-            }                              
+                StationProtoMessage message = StationProtoMessage
+                                                .newBuilder()
+                                                .setAbrev(station.getAbrev())
+                                                .setLatitude(station.getLatitude())
+                                                .setLongitude(station.getLongitude())
+                                                .setDocks(station.getDocks())
+                                                .setReward(station.getReward())
+                                                .setBikes(bikes)
+                                                .setDistance(stationDistance.getDistance())
+                                                .build();
+                protoStations.add(message);
+            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+                responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+            }                        
         });
 
         LocateStationResponse response = LocateStationResponse
@@ -343,45 +277,125 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         float userLatitude = request.getUserLatitude();
         float userLongitude = request.getUserLongitude();
         String stationAbrev = request.getStationId();
+        
+        if(!immutableRecords.existsStation(stationAbrev)) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO Estação inexistente.").asRuntimeException());
+            return;
+        }
+        
         Station station = immutableRecords.getStation(stationAbrev);
         
         if(!Haversine.inRangeStation(userLatitude, userLongitude, station.getLatitude(), station.getLongitude())) {
             responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO fora de alcance.").asRuntimeException());
+            return;
         }
 
-        String bikesRegisterName = "bikes-" + station.getAbrev();
-        String isBikedUpRegisterName = "is-biked-up-" + username;
-        ReadRequest bikesReadRequest = ReadRequest.newBuilder().setRegisterName(bikesRegisterName).build();
-        ReadRequest isBikedUpReadRequest = ReadRequest.newBuilder().setRegisterName(isBikedUpRegisterName).build();
-        try {
-            ZKRecord recRecord = zkNaming.lookup("/grpc/bicloin/rec/1");
-            setRec(recRecord);
-            try {
-                ReadResponse bikesReadResponse = recStub.read(bikesReadRequest);
-                ReadResponse isBikedUpReadResponse = recStub.read(isBikedUpReadRequest);
+        try {            
+            String isBikedUpRegisterName = "isBikedUp-" + username;
+            Boolean isBikedUp = recFrontend.readIsBikedUp(isBikedUpRegisterName);
+            
+            String bikesRegisterName = "bikes-" + station.getAbrev();
+            Integer bikes = recFrontend.readBikes(bikesRegisterName);
 
-                if(bikesReadResponse.getRegisterValue().unpack(Bikes.class).getBikes() == 0) {
-                    responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO estação sem bicicletas disponíveis.").asRuntimeException());
-                }
-                if(isBikedUpReadResponse.getRegisterValue().unpack(IsBikedUp.class).getIsBikedUp() == true) {
-                    responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO utilizador já tem uma bicicleta levantada.").asRuntimeException());
-                }
-                
-                if(Context.current().isCancelled()) {
-                    return;
-                }
-                
-                //TODO
+            String balanceRegisterName = "balance-" + username;
+            Integer balance = recFrontend.readBalance(balanceRegisterName);
 
-                BikeUpResponse response = BikeUpResponse.newBuilder().build();
-                responseObserver.onNext(response);
-                responseObserver.onCompleted();
-                
-            } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-                System.out.println("Rec instance number " + getInstanceNumber(recRecord) + " is DOWN.\n");
+            String bikeUpStatsRegisterName = "bikeUpStats-" + station.getAbrev();
+            Integer bikeUpStats = recFrontend.readBikeUpStats(bikeUpStatsRegisterName);
+
+            if(isBikedUp == true) {
+                responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO utilizador já tem uma bicicleta levantada.").asRuntimeException());
+                return;
             }
-        } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
+            if(bikes == 0) {
+                responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO estação sem bicicletas disponíveis.").asRuntimeException());
+                return;
+            }
+            if(balance < 10) {
+                responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO saldo insuficiente.").asRuntimeException());
+                return;
+            }
+
+            recFrontend.writeIsBikedUp(isBikedUpRegisterName, true);
+            recFrontend.writeBikes(bikesRegisterName, bikes - 1);
+            recFrontend.writeBalance(balanceRegisterName, balance - 10);
+            recFrontend.writeBikeUpStats(bikeUpStatsRegisterName, bikeUpStats + 1);
+
+            if(Context.current().isCancelled()) {
+                recFrontend.writeIsBikedUp(isBikedUpRegisterName, false);
+                recFrontend.writeBikes(bikesRegisterName, bikes);
+                recFrontend.writeBalance(balanceRegisterName, balance);
+                recFrontend.writeBikeUpStats(bikeUpStatsRegisterName, bikeUpStats);
+                return;
+            }
+
+            BikeUpResponse response = BikeUpResponse.newBuilder().build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+        }
+    }
+
+    @Override
+    public void bikeDown(BikeDownRequest request, StreamObserver<BikeDownResponse> responseObserver) {
+        String username = request.getUsername();
+        float userLatitude = request.getUserLatitude();
+        float userLongitude = request.getUserLongitude();
+        String stationAbrev = request.getStationId();
+
+        if(!immutableRecords.existsStation(stationAbrev)) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO Estação inexistente.").asRuntimeException());
+            return;
+        }
+        
+        Station station = immutableRecords.getStation(stationAbrev);
+
+        if(!Haversine.inRangeStation(userLatitude, userLongitude, station.getLatitude(), station.getLongitude())) {
+            responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO fora de alcance.").asRuntimeException());
+            return;
+        }
+
+        try {
+            String isBikedUpRegisterName = "isBikedUp-" + username;
+            Boolean isBikedUp = recFrontend.readIsBikedUp(isBikedUpRegisterName);
+            
+            String bikesRegisterName = "bikes-" + station.getAbrev();
+            Integer bikes = recFrontend.readBikes(bikesRegisterName);
+
+            String balanceRegisterName = "balance-" + username;
+            Integer balance = recFrontend.readBalance(balanceRegisterName);
+
+            String bikeDownStatsRegisterName = "bikeDownStats-" + station.getAbrev();
+            Integer bikeDownStats = recFrontend.readBikeDownStats(bikeDownStatsRegisterName);
+
+            if(isBikedUp == false) {
+                responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO utilizador não tem uma bicicleta levantada.").asRuntimeException());
+                return;
+            }
+            if(bikes == station.getDocks()) {
+                responseObserver.onError(FAILED_PRECONDITION.withDescription("ERRO estação com docas cheias.").asRuntimeException());
+                return;
+            }
+
+            recFrontend.writeIsBikedUp(isBikedUpRegisterName, false);
+            recFrontend.writeBikes(bikesRegisterName, bikes + 1);
+            recFrontend.writeBalance(balanceRegisterName, balance + station.getReward());
+            recFrontend.writeBikeDownStats(bikeDownStatsRegisterName, bikeDownStats + 1);
+
+            if(Context.current().isCancelled()) {
+                recFrontend.writeIsBikedUp(isBikedUpRegisterName, true);
+                recFrontend.writeBikes(bikesRegisterName, bikes);
+                recFrontend.writeBalance(balanceRegisterName, balance);
+                recFrontend.writeBikeDownStats(bikeDownStatsRegisterName, bikeDownStats);
+                return;
+            }
+
+            BikeDownResponse response = BikeDownResponse.newBuilder().build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+        } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
         }
     }
 

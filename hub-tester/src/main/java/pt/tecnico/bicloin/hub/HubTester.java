@@ -1,7 +1,8 @@
 package pt.tecnico.bicloin.hub;
 
 import io.grpc.StatusRuntimeException;
-import pt.tecnico.bicloin.hub.grpc.Hub.*;
+import pt.tecnico.bicloin.hub.domain.User;
+import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
 public class HubTester {
@@ -17,12 +18,14 @@ public class HubTester {
 
 		String zooHost = args[0];
 		String zooPort = args[1];
-		String path = args[2];
+		User user = new User(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
 
-		try (HubFrontend frontend = new HubFrontend(zooHost, zooPort, path)) {
-			SysStatusRequest sysStatusRequest = SysStatusRequest.newBuilder().build();
-			SysStatusResponse sysStatusResponse = frontend.sysStatus(sysStatusRequest);
-			System.out.println(sysStatusResponse.getOutput());
+		try {
+			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
+			HubFrontend frontend = new HubFrontend(zkNaming, user);
+			String pingOutput = frontend.ping();
+			System.out.println(pingOutput);
+			frontend.close();
 
 		} catch (StatusRuntimeException e) {
 			System.out.println("Caught Status Runtime exception with description: " + e.getStatus());

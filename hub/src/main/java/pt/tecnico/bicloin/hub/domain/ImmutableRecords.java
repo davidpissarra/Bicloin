@@ -4,42 +4,38 @@ import java.util.List;
 import java.util.Scanner;
 
 import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.bicloin.hub.domain.exception.ErrorMessage;
 import pt.tecnico.bicloin.hub.domain.exception.InvalidStationException;
+import pt.tecnico.rec.RecFrontend;
 import pt.tecnico.rec.grpc.RecServiceGrpc;
 import pt.tecnico.rec.grpc.Rec.BikeDownStats;
 import pt.tecnico.rec.grpc.Rec.BikeUpStats;
 import pt.tecnico.rec.grpc.Rec.Bikes;
 import pt.tecnico.rec.grpc.Rec.IsBikedUp;
 import pt.tecnico.rec.grpc.Rec.WriteRequest;
-import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
-import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
-
-import static pt.tecnico.bicloin.hub.domain.exception.ErrorMessage.*;
 
 public class ImmutableRecords {
     private static final ErrorMessage INVALID_NUMBER_BIKES_AVAILABLE = null;
     private final List<User> users = new ArrayList<>();
     private final List<Station> stations = new ArrayList<>();
 
-    public ImmutableRecords(String users, String stations, boolean initRec, RecServiceGrpc.RecServiceBlockingStub stub) throws FileNotFoundException {
-        importUsers(users, initRec, stub);
-        importStations(stations, initRec, stub);
+    public ImmutableRecords(String users, String stations, boolean initRec, RecFrontend frontend) throws FileNotFoundException {
+        importUsers(users, initRec, frontend);
+        importStations(stations, initRec, frontend);
     }
 
     public List<Station> getStations() {
         return stations;
     }
 
-    private void importUsers(String usersFilename, boolean initRec, RecServiceGrpc.RecServiceBlockingStub stub) throws FileNotFoundException {
+    private void importUsers(String usersFilename, boolean initRec, RecFrontend frontend) throws FileNotFoundException {
         String path = "src/main/java/pt/tecnico/bicloin/hub/" + usersFilename;
         Scanner scanner = new Scanner(new File(path));
         while(scanner.hasNext()) {
@@ -49,13 +45,13 @@ public class ImmutableRecords {
             String phoneNumber = args[2];
             users.add(new User(id, name, phoneNumber));
             if(initRec) {
-                createUserRecords(id, stub); 
+                createUserRecords(id, frontend); 
             }
         }
         scanner.close();
     }
 
-    private void importStations(String stationsFilename, boolean initRec, RecServiceGrpc.RecServiceBlockingStub stub) throws FileNotFoundException {
+    private void importStations(String stationsFilename, boolean initRec, RecFrontend frontend) throws FileNotFoundException {
         String path = "src/main/java/pt/tecnico/bicloin/hub/" + stationsFilename;
         Scanner scanner = new Scanner(new File(path));
         while(scanner.hasNext()) {
@@ -74,56 +70,36 @@ public class ImmutableRecords {
 
             stations.add(new Station(name, abrev, latitude, longitude, docks, reward));
             if(initRec) {
-                createStationRecords(bikesAvailable, abrev, stub); 
+                createStationRecords(bikesAvailable, abrev, frontend); 
             }
         }
         scanner.close();
     }
 
-    public void createUserRecords(String abrev, RecServiceGrpc.RecServiceBlockingStub stub) {
-        String isBikedUpRegisterName = "bikes-" + abrev;
-        
-        IsBikedUp isBikedUp = IsBikedUp.newBuilder().setIsBikedUp(false).build();
-        WriteRequest isBikedUpWriteRequest = WriteRequest
-                                        .newBuilder()
-                                        .setRegisterName(isBikedUpRegisterName)
-                                        .setValue(Any.pack(isBikedUp))
-                                        .build();
+    public void createUserRecords(String abrev, RecFrontend frontend) {
+        String isBikedUpRegisterName = "isBikedUp-" + abrev;
+    
         try {
-            stub.write(isBikedUpWriteRequest);
+            frontend.writeIsBikedUp(isBikedUpRegisterName, false);
         } catch(StatusRuntimeException e) {
             System.out.println("Rec instance is DOWN.\n");
+        } catch (InvalidProtocolBufferException e) {
+            System.out.println(e.getMessage());
         }
     }
 
-    public void createStationRecords(Integer bikesAvailable, String abrev, RecServiceGrpc.RecServiceBlockingStub stub) {
+    public void createStationRecords(Integer bikesAvailable, String abrev, RecFrontend frontend) {
         String bikesRegisterName = "bikes-" + abrev;
         String bikeUpStatsRegisterName = "bikeUpStats-" + abrev;
         String bikeDownStatsRegisterName = "bikeDownStats-" + abrev;
-        Bikes bikes = Bikes.newBuilder().setBikes(bikesAvailable).build();
-        BikeUpStats bikeUpStats = BikeUpStats.newBuilder().setBikeUpStats(0).build();
-        BikeDownStats bikeDownStats = BikeDownStats.newBuilder().setBikeDownStats(0).build();
-        WriteRequest bikesWriteRequest = WriteRequest
-                                        .newBuilder()
-                                        .setRegisterName(bikesRegisterName)
-                                        .setValue(Any.pack(bikes))
-                                        .build();
-        WriteRequest bikeUpStatsWriteRequest = WriteRequest
-                                        .newBuilder()
-                                        .setRegisterName(bikeUpStatsRegisterName)
-                                        .setValue(Any.pack(bikeUpStats))
-                                        .build();
-        WriteRequest bikeDownStatsWriteRequest = WriteRequest
-                                        .newBuilder()
-                                        .setRegisterName(bikeDownStatsRegisterName)
-                                        .setValue(Any.pack(bikeDownStats))
-                                        .build();
         try {
-            stub.write(bikesWriteRequest);
-            stub.write(bikeUpStatsWriteRequest);
-            stub.write(bikeDownStatsWriteRequest);
+            frontend.writeBikes(bikesRegisterName, bikesAvailable);
+            frontend.writeBikeUpStats(bikeUpStatsRegisterName, 0);
+            frontend.writeBikeDownStats(bikeDownStatsRegisterName, 0);
         } catch(StatusRuntimeException e) {
             System.out.println("Rec instance is DOWN.\n");
+        } catch (InvalidProtocolBufferException e) {
+            System.out.println(e.getMessage());
         }
     }
 

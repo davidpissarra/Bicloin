@@ -5,6 +5,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import pt.tecnico.bicloin.hub.domain.exception.InvalidStationException;
 import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
+import pt.tecnico.rec.RecFrontend;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
 
@@ -16,16 +17,13 @@ public class HubMain {
 	public static void main(String[] args) throws IOException, InterruptedException, ZKNamingException {
 		System.out.println(HubMain.class.getSimpleName());
 		
-		// receive and print arguments
 		System.out.printf("Received %d arguments%n", args.length);
 		for (int i = 0; i < args.length; i++) {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
 		}
 
-		// check arguments TODO insufficient  parsing
 		if (args.length < 5) {
 			System.err.println("Argument(s) missing!");
-			//System.err.printf("Usage: java %s port%n", TTTServer.class.getName());
 			return;
 		}
 
@@ -40,13 +38,15 @@ public class HubMain {
 		Integer lastSlashIndex = path.lastIndexOf('/');
 		final Integer instance = Integer.valueOf(path.substring(lastSlashIndex + 1));
 
-		ZKNaming zkNaming = null;
 		try {
-			zkNaming = new ZKNaming(zooHost, zooPort);
+			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
 			zkNaming.rebind(path, host, port);
 
+			RecFrontend recFrontend = new RecFrontend(zkNaming, "/grpc/bicloin/rec/1");
+			HubFrontend hubFrontend = new HubFrontend(zkNaming, null);
+
 			boolean initRec = args.length == 8;
-			final BindableService impl = new HubServerImpl(instance, zkNaming, users, stations, initRec);
+			final BindableService impl = new HubServerImpl(instance, recFrontend, hubFrontend, users, stations, initRec);
 
 			// Create a new server to listen on port
 			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
@@ -65,10 +65,6 @@ public class HubMain {
 		} catch(InvalidUserException | InvalidStationException | FileNotFoundException e) {
 			System.out.println(e.getMessage());
 			return;
-		} finally {
-			if(zkNaming != null) {
-				zkNaming.unbind(path, host, port);
-			}
 		}
 	}
 	

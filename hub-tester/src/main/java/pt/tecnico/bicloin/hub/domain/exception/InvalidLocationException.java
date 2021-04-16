@@ -1,4 +1,4 @@
-package pt.tecnico.bicloin.app.domain.exception;
+package pt.tecnico.bicloin.hub.domain.exception;
 
 public class InvalidLocationException extends RuntimeException {
 

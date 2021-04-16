@@ -1,8 +1,8 @@
-package pt.tecnico.bicloin.app.domain;
+package pt.tecnico.bicloin.hub.domain;
 
-import pt.tecnico.bicloin.app.domain.exception.InvalidLocationException;
+import pt.tecnico.bicloin.hub.domain.exception.InvalidLocationException;
 
-import static pt.tecnico.bicloin.app.domain.exception.ErrorMessage.*;
+import static pt.tecnico.bicloin.hub.domain.exception.ErrorMessage.*;
 
 public class Tag {
 
