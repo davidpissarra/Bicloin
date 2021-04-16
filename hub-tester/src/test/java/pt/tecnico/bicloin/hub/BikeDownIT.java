@@ -10,6 +10,7 @@ public class BikeDownIT extends BaseIT {
     
     @Test
 	public void bikeDownSuccessful() {
+        frontend.topUp(10);
         frontend.move((float) 38.7376, (float) -9.3031); // tagus
 		frontend.bikeUp(ABREV_ISTT);
         String output = frontend.bikeDown(ABREV_ISTT);
@@ -18,6 +19,7 @@ public class BikeDownIT extends BaseIT {
 
     @Test
 	public void bikeDownOutOfRange() {
+        frontend.topUp(10);
         frontend.move((float) 38.7376, (float) -9.3031); // tagus
 		frontend.bikeUp(ABREV_ISTT);
         frontend.move((float) -38.7376, (float) 9.3031); // far away
