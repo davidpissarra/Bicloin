@@ -103,44 +103,18 @@ public class HubFrontend implements AutoCloseable {
                                             .setNStations(nStations)
                                             .build();
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
-            LocateStationResponse response = tryScan(hubRecords, request);
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
+            setHub(record);
+            LocateStationResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).locateStation(request);
             return responseOutput(response);
         } catch (ZKNamingException e) {
-            System.out.println("ERRO ZKNAMING EXCEPTION");
-        }
-        return null;
-    }
-
-    private LocateStationResponse tryScan(Collection<ZKRecord> hubRecords, LocateStationRequest request) {
-        for(ZKRecord record : hubRecords) {
-            setHub(record);
-            try {
-                LocateStationResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).locateStation(request);
-                return response;
-            } catch (StatusRuntimeException e) {
-                if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                    System.out.println("ERRO Timeout limit exceeded. Retrying to another hub.");
-                }
-                else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                    System.out.println("ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.");
-                }
-            }
-        }
-        return null;
-    }
-
-    public String ping(ZKRecord record) {
-        setHub(record);
-        PingRequest request = PingRequest.newBuilder().build();
-        try {
-            return responseOutput(stub.ping(request));
+            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                return "ERRO Timeout limit exceeded. Retrying to another hub.";
+                return "ERRO Tempo de conexão com o Hub expirado.";
             }
             else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
+                return "ERRO Servidor Hub não se encontra ativo.";
             }
             else {
                 return e.getStatus().getDescription();
@@ -150,153 +124,131 @@ public class HubFrontend implements AutoCloseable {
 
     public String ping() {
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
+            setHub(record);
             PingRequest request = PingRequest.newBuilder().build();
-            for(ZKRecord record : hubRecords) {
-                setHub(record);
-                try {
-                    return responseOutput(stub.ping(request));
-                } catch (StatusRuntimeException e) {
-                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                        return "ERRO Timeout limit exceeded. Retrying to another hub.";
-                    }
-                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                        return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
-                    }
-                    else {
-                        return e.getStatus().getDescription();
-                    }
-                }
-            }
+            return responseOutput(stub.ping(request));
         } catch (ZKNamingException e) {
-            System.out.println("ZKNAMING EXCEPTION");
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
+            }
         }
-        return null;
     }
 
     public String sysStatus() {
         SysStatusRequest sysStatusRequest = SysStatusRequest.newBuilder().build();
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
-            SysStatusResponse response = trySysStatus(hubRecords, sysStatusRequest);
-            return responseOutput(response);
-        } catch (ZKNamingException e) {
-            System.out.println("ERRO ZKNAMING EXCEPTION");
-        }
-        return null;
-    }
-
-    private SysStatusResponse trySysStatus(Collection<ZKRecord> hubRecords, SysStatusRequest sysStatusRequest) {
-        for(ZKRecord record : hubRecords) {
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
             setHub(record);
-            try {
-                SysStatusResponse sysStatusResponse = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).sysStatus(sysStatusRequest);
-                return sysStatusResponse;
-            } catch (StatusRuntimeException e) {
-                if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                    System.out.println("ERRO Timeout limit exceeded. Retrying to another hub.");
-                }
-                else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                    System.out.println("ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.");
-                }
+            SysStatusResponse sysStatusResponse = stub
+                                                    .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                                    .sysStatus(sysStatusRequest);
+            return responseOutput(sysStatusResponse); 
+        } catch (ZKNamingException e) {
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
             }
         }
-        return null;
     }
 
     public String balance() {
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
             BalanceRequest balanceRequest = BalanceRequest.newBuilder().setUsername(user.getId()).build();
-            for(ZKRecord record : hubRecords) {
-                setHub(record);
-                try {
-                    BalanceResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
-                                                        .balance(balanceRequest);
-                    return responseOutput(response);
-                } catch (StatusRuntimeException e) {
-                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                        return " ERRO Timeout limit exceeded. Retrying to another hub.";
-                    }
-                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                        return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
-                    }
-                    else {
-                       return e.getStatus().getDescription();
-                    }
-                }
-            }
+            setHub(record);
+            BalanceResponse response = stub
+                                        .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                        .balance(balanceRequest);
+            return responseOutput(response);
         } catch (ZKNamingException e) {
-            return "ERRO ZKNAMING EXCEPTION";
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
+            }
         }
-        return null;
     }
 
     public String topUp(Integer value) {
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
+            setHub(record);
             TopUpRequest topUpRequest = TopUpRequest.newBuilder()
                                             .setUsername(user.getId())
                                             .setAmount(value)
                                             .setPhone(user.getPhoneNumber())
                                             .build();
-            for(ZKRecord record : hubRecords) {
-                setHub(record);
-                try {
-                    TopUpResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
-                                                        .topUp(topUpRequest);
-                    return responseOutput(response);
-                } catch (StatusRuntimeException e) {
-                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                       return "ERRO Timeout limit exceeded. Retrying to another hub.";
-                    }
-                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                        return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
-                    }
-                    else {
-                        return e.getStatus().getDescription();
-                    }
-                }
-            }
+            TopUpResponse response = stub
+                                        .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                        .topUp(topUpRequest);
+            return responseOutput(response);
         } catch (ZKNamingException e) {
-            System.out.println("ZKNAMING EXCEPTION");
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
+            }
         }
-        return null;
     }
 
     public String infoStation(String abrev) {
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
+            setHub(record);
             InfoStationRequest infoStationRequest = InfoStationRequest.newBuilder()
                                             .setStationId(abrev)
                                             .build();
-            for(ZKRecord record : hubRecords) {
-                setHub(record);
-                try {
-                    InfoStationResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
-                                                        .infoStation(infoStationRequest);
-                    return responseOutput(response);
-                } catch (StatusRuntimeException e) {
-                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                        return "ERRO Timeout limit exceeded. Retrying to another hub.";
-                    }
-                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                        return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
-                    }
-                    else {
-                        return e.getStatus().getDescription();
-                    }
-                }
-            }
+            InfoStationResponse response = stub
+                                            .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                            .infoStation(infoStationRequest);
+            return responseOutput(response);
         } catch (ZKNamingException e) {
-            System.out.println("ZKNAMING EXCEPTION");
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
+            }
         }
-        return null;
     }
 
     public String bikeUp(String abrev) {
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
+            setHub(record);
             BikeUpRequest request = BikeUpRequest
                                             .newBuilder()
                                             .setUsername(user.getId())
@@ -304,33 +256,29 @@ public class HubFrontend implements AutoCloseable {
                                             .setUserLongitude(user.getLongitude())
                                             .setStationId(abrev)
                                             .build();
-            for(ZKRecord record : hubRecords) {
-                setHub(record);
-                try {
-                    BikeUpResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
-                                                        .bikeUp(request);
-                    return responseOutput(response);
-                } catch (StatusRuntimeException e) {
-                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                        return "ERRO Timeout limit exceeded. Retrying to another hub.";
-                    }
-                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                        return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
-                    }
-                    else {
-                        return e.getStatus().getDescription();
-                    }
-                }
-            }
+            BikeUpResponse response = stub
+                                        .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                        .bikeUp(request);
+            return responseOutput(response);
         } catch (ZKNamingException e) {
-            System.out.println("ZKNAMING EXCEPTION");
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
+            }
         }
-        return null;
     }
 
     public String bikeDown(String abrev) {
         try {
-            Collection<ZKRecord> hubRecords = zkNaming.listRecords("/grpc/bicloin/hub");
+            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
+            setHub(record);
             BikeDownRequest request = BikeDownRequest
                                             .newBuilder()
                                             .setUsername(user.getId())
@@ -338,28 +286,23 @@ public class HubFrontend implements AutoCloseable {
                                             .setUserLongitude(user.getLongitude())
                                             .setStationId(abrev)
                                             .build();
-            for(ZKRecord record : hubRecords) {
-                setHub(record);
-                try {
-                    BikeDownResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
-                                                        .bikeDown(request);
-                    return responseOutput(response);
-                } catch (StatusRuntimeException e) {
-                    if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
-                        return "ERRO Timeout limit exceeded. Retrying to another hub.";
-                    }
-                    else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
-                        return "ERRO Hub instance number " + getInstance() + " is DOWN! Retrying to another hub.";
-                    }
-                    else {
-                        return e.getStatus().getDescription();
-                    }
-                }
-            }
+            BikeDownResponse response = stub
+                                            .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
+                                            .bikeDown(request);
+            return responseOutput(response); 
         } catch (ZKNamingException e) {
-            System.out.println("ZKNAMING EXCEPTION");
+            return "ERRO Servidor Hub não encontrado.";
+        } catch (StatusRuntimeException e) {
+            if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
+                return "ERRO Tempo de conexão com o Hub expirado.";
+            }
+            else if(e.getStatus().getCode() == Code.UNAVAILABLE) {
+                return "ERRO Servidor Hub não se encontra ativo.";
+            }
+            else {
+                return e.getStatus().getDescription();
+            }
         }
-        return null;
     }
 
     public String printHelp(String path) {
@@ -380,7 +323,7 @@ public class HubFrontend implements AutoCloseable {
 
     private String responseOutput(Message message) {
 		if(message instanceof PingResponse) {
-			PingResponse pingResponse = (PingResponse) message;
+            PingResponse pingResponse = (PingResponse) message;
             return pingResponse.getOutput();
 		}
 		else if(message instanceof SysStatusResponse) {

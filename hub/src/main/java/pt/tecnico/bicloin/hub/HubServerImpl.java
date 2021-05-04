@@ -78,9 +78,10 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     public void sysStatus(Hub.SysStatusRequest request, StreamObserver<Hub.SysStatusResponse> responseObserver) {
         try {
             Collection<ZKRecord> recRecords = recFrontend.getRecRecords();
-            Collection<ZKRecord> hubRecords = recFrontend.getHubRecords();
+            
+            String output = "Hub Server is UP.\n";
 
-            String output = getOutput(recRecords, hubRecords);
+            output = pingRecs(recRecords, output);
 
             Hub.SysStatusResponse response = Hub.SysStatusResponse.newBuilder().setOutput(output).build();
             responseObserver.onNext(response);
@@ -91,13 +92,6 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         }
     }
 
-    private String getOutput(Collection<ZKRecord> recRecords, Collection<ZKRecord> hubRecords) {
-        String output = "";
-        output = pingHubs(hubRecords, output);
-        output = pingRecs(recRecords, output);
-        return output;
-    }
-
     private String pingRecs(Collection<ZKRecord> recRecords, String output) {
         for(ZKRecord rec : recRecords) {
             try {
@@ -106,17 +100,6 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             } catch(StatusRuntimeException e) {
                 output += "ERRO Rec instance number " + getRecInstance() + " is DOWN.\n";
             }
-        }
-        return output;
-    }
-
-    private String pingHubs(Collection<ZKRecord> hubRecords, String output) {
-        for(ZKRecord hub : hubRecords) {
-            try {
-                output += hubFrontend.ping(hub) + "\n";
-            } catch(StatusRuntimeException e) {
-                output += "ERRO Hub instance number " + getHubInstance() + " is DOWN.\n";
-            } 
         }
         return output;
     }
