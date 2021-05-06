@@ -41,7 +41,8 @@ public class RecFrontend implements AutoCloseable {
         return this.records;
     }
 
-    public String ping() {
+    public String ping(ZKRecord record) {
+        setRec(record);
         PingRequest request = PingRequest.newBuilder().build();
         return stub.ping(request).getOutput();
     }
@@ -156,8 +157,11 @@ public class RecFrontend implements AutoCloseable {
     }
 
     public void clean() throws StatusRuntimeException, InvalidProtocolBufferException {
-        CleanRequest request = CleanRequest.newBuilder().build();
-        stub.clean(request);
+        for(ZKRecord record: records) {
+            setRec(record);
+            CleanRequest request = CleanRequest.newBuilder().build();
+            stub.clean(request);
+        }
     }
 
     @Override

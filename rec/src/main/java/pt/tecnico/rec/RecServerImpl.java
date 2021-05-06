@@ -25,7 +25,7 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
 
     @Override
     public void ping(PingRequest request, StreamObserver<PingResponse> responseObserver) {
-        String output = "Réplica " + instance + " do rec está ligado.";
+        String output = "Réplica " + instance + " do rec está ligada.";
         PingResponse response = PingResponse.newBuilder().setOutput(output).build();
         responseObserver.onNext(response);
 		responseObserver.onCompleted();

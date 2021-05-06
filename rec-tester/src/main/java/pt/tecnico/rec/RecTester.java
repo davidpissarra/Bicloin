@@ -5,6 +5,7 @@ import java.io.IOException;
 import io.grpc.StatusRuntimeException;
 import pt.ulisboa.tecnico.sdis.zk.ZKNaming;
 import pt.ulisboa.tecnico.sdis.zk.ZKNamingException;
+import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
 
 public class RecTester {
 	
@@ -24,8 +25,8 @@ public class RecTester {
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
 			RecFrontend frontend = new RecFrontend(zkNaming);
-			
-			String output = frontend.ping();
+			ZKRecord record = zkNaming.lookup("/grpc/bicloin/rec/1");
+			String output = frontend.ping(record);
 			System.out.println(output);
 			frontend.close();
 		} catch (StatusRuntimeException e) {

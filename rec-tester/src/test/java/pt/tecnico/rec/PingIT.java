@@ -2,14 +2,17 @@ package pt.tecnico.rec;
 
 import org.junit.jupiter.api.*;
 
+import pt.ulisboa.tecnico.sdis.zk.ZKRecord;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PingIT extends BaseIT {
 	
 	@Test
 	public void ping() {
-		String output = frontend.ping();
-		assertEquals("Rec instance number 1 is UP.", output);
+		ZKRecord record = frontend.getRecords().iterator().next();
+		String output = frontend.ping(record);
+		assertEquals("Réplica 1 do rec está ligada.", output);
 	}
 
 }

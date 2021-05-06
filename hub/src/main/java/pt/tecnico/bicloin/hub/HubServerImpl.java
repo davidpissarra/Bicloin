@@ -59,7 +59,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void ping(Hub.PingRequest request, StreamObserver<Hub.PingResponse> responseObserver) {
-        String output = "Hub instance number " + getHubInstance() + " is UP.";
+        String output = "Servidor hub está ligado.";
         Hub.PingResponse response = Hub.PingResponse.newBuilder().setOutput(output).build();
 
         if(Context.current().isCancelled()) {
@@ -74,7 +74,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     public void sysStatus(Hub.SysStatusRequest request, StreamObserver<Hub.SysStatusResponse> responseObserver) {
         Collection<ZKRecord> recRecords = recFrontend.getRecords();
         
-        String output = "Hub Server is UP.\n";
+        String output = "Servidor hub está ligado.\n";
 
         output = pingRecs(recRecords, output);
 
@@ -86,8 +86,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     private String pingRecs(Collection<ZKRecord> recRecords, String output) {
         for(ZKRecord rec : recRecords) {
             try {
-                recFrontend.setRec(rec);
-                output += recFrontend.ping() + "\n";
+                output += recFrontend.ping(rec) + "\n";
             } catch(StatusRuntimeException e) {
                 output += "ERRO Rec incontactável.\n";
             }

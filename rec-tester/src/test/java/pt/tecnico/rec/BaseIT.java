@@ -17,7 +17,7 @@ public class BaseIT {
 	protected static String recPath;
 	
 	@BeforeAll
-	public static void oneTimeSetup () throws IOException {
+	public static void oneTimeSetup () throws IOException, ZKNamingException {
 		testProps = new Properties();
 		
 		try {
@@ -30,7 +30,7 @@ public class BaseIT {
 			recPath = testProps.getProperty("rec.path");
 			frontend = new RecFrontend(new ZKNaming(zooHost, zooPort));
 
-		}catch (IOException e) {
+		} catch (IOException e) {
 			final String msg = String.format("Could not load properties file {}", TEST_PROP_FILE);
 			System.out.println(msg);
 			throw e;

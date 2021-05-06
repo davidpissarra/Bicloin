@@ -9,7 +9,11 @@ public class SysStatusIT extends BaseIT {
     @Test
 	public void ping() {
 		String output = frontend.sysStatus();
-		assertEquals("Hub instance number 1 is UP.\nRec instance number 1 is UP.\n", output);
+		assertEquals("Servidor hub está ligado.\n"
+						+ "Réplica 1 do rec está ligada.\n"
+						+ "Réplica 2 do rec está ligada.\n"
+						+ "Réplica 3 do rec está ligada.\n"
+							, output);
 	}
 
 }

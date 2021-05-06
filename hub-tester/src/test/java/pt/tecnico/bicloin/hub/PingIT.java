@@ -9,7 +9,7 @@ public class PingIT extends BaseIT {
     @Test
 	public void ping() {
 		String output = frontend.ping();
-		assertEquals("Hub instance number 1 is UP.", output);
+		assertEquals("Servidor hub está ligado.", output);
 	}
 
 }
