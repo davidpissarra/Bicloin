@@ -39,8 +39,8 @@ public class BaseIT {
 	}
 	
 	@AfterAll
-	public static void cleanup() {
-		
+	public static void cleanup() throws Exception {
+		frontend.close();
 	}
 
 }

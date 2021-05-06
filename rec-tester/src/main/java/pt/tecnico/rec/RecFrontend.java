@@ -32,6 +32,9 @@ public class RecFrontend implements AutoCloseable {
     }
 
     public void setRec(ZKRecord record) {
+        if(channel != null) {
+            this.channel.shutdown();
+        }
         String target = record.getURI();
         this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         this.stub = RecServiceGrpc.newBlockingStub(channel);
@@ -44,7 +47,9 @@ public class RecFrontend implements AutoCloseable {
     public String ping(ZKRecord record) {
         setRec(record);
         PingRequest request = PingRequest.newBuilder().build();
-        return stub.ping(request).getOutput();
+        String output = stub.ping(request).getOutput();
+        this.channel.shutdown();
+        return output;
     }
 
     public ReadResponse read(String registerName) throws StatusRuntimeException {

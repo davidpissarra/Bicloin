@@ -43,7 +43,7 @@ public class MainThread extends Thread {
                     }
                     this.lastSize++;
                 }
-                System.out.println("Quorum accepted!");
+                System.out.println("Quorum aceite!");
             }
             response = null;
             Integer tag = -1;

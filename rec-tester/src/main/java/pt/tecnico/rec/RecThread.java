@@ -45,11 +45,11 @@ public class RecThread extends Thread {
 
     public void run() throws StatusRuntimeException {
         System.out.printf("A contactar réplica %d do rec.%n", this.instance);
-        if(requestMessage instanceof ReadRequest) {
+        if(requestMessage instanceof ReadRequest && this.channel != null) {
             ReadRequest request = (ReadRequest) requestMessage;
             stub.read(request, new RecObserver<ReadResponse>(responseCollector, instance));
         }
-        else if(requestMessage instanceof WriteRequest) {
+        else if(requestMessage instanceof WriteRequest && this.channel != null) {
             WriteRequest request = (WriteRequest) requestMessage;
             stub.write(request, new RecObserver<WriteResponse>(responseCollector, instance));
         }
