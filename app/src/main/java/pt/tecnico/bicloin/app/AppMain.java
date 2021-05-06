@@ -13,17 +13,16 @@ import pt.tecnico.bicloin.hub.domain.exception.InvalidUserException;
 public class AppMain {
 	
 	public static void main(String[] args) throws ZKNamingException {
-		System.out.println(AppMain.class.getSimpleName());
+
+		if(args.length != 6){
+			System.err.println("Argumentos inválidos!");
+			return;
+		}
 		
 		// receive and print arguments
-		System.out.printf("Received %d arguments%n", args.length);
+		System.out.printf("Recebidos %d argumentos%n", args.length);
 		for (int i = 0; i < args.length; i++) {
 			System.out.printf("arg[%d] = %s%n", i, args[i]);
-		}
-
-		if(args.length < 6 || args.length > 7){
-			System.err.println("Invalid arguments!");
-			return;
 		}
 
 		final String zooHost = args[0];
@@ -31,11 +30,8 @@ public class AppMain {
 		AppUser user = new AppUser(args[2], args[3], Float.valueOf(args[4]), Float.valueOf(args[5]));
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
-			HubFrontend frontend = new HubFrontend(zkNaming, user);
-
-			if(args.length == 6) {
-				readCommands(System.in, frontend);
-			}
+			HubFrontend frontend = new HubFrontend(zkNaming, user, "/grpc/bicloin/hub/1");
+			readCommands(System.in, frontend);
 		} catch(InvalidUserException e) {
 			System.out.println(e.getMessage());
 			return;
@@ -77,14 +73,12 @@ public class AppMain {
 			else if(command.startsWith("top-up")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 				Integer value;
 				if(!isNumeric(tokens[1])) {
-					System.out.println("ERRO argumento.");
-					System.out.print("> ");
+					argumentError();
 					continue;
 				}
 				else {
@@ -95,14 +89,13 @@ public class AppMain {
 					System.out.println(frontend.topUp(value));
 				}
 				else {
-					System.out.println("Carregamento deve ser entre 1 e 20 Euros.");
+					System.out.println("ERRO Carregamento deve ser entre 1 e 20 Euros.");
 				}
 			}
 			else if(command.startsWith("info")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 				String abrev = tokens[1];
@@ -111,14 +104,12 @@ public class AppMain {
 			else if(command.startsWith("tag")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 4) {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 				float latitude;
 				if(!isFloat(tokens[1])) {
-					System.out.println("ERRO argumento.");
-					System.out.print("> ");
+					argumentError();
 					continue;
 				}
 				else {
@@ -126,8 +117,7 @@ public class AppMain {
 				}
 				float longitude;
 				if(!isFloat(tokens[2])) {
-					System.out.println("ERRO argumento.");
-					System.out.print("> ");
+					argumentError();
 					continue;
 				}
 				else {
@@ -146,8 +136,7 @@ public class AppMain {
 				else if(tokens.length == 3){
 					float latitude;
 					if(!isFloat(tokens[1])) {
-						System.out.println("ERRO argumento.");
-						System.out.print("> ");
+						argumentError();
 						continue;
 					}
 					else {
@@ -155,8 +144,7 @@ public class AppMain {
 					}
 					float longitude;
 					if(!isFloat(tokens[2])) {
-						System.out.println("ERRO argumento.");
-						System.out.print("> ");
+						argumentError();
 						continue;
 					}
 					else {
@@ -165,8 +153,7 @@ public class AppMain {
 					System.out.println(frontend.move(latitude, longitude));
 				}
 				else {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 			}
@@ -176,14 +163,12 @@ public class AppMain {
 			else if(command.startsWith("scan")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 				Integer nStations;
 				if(!isNumeric(tokens[1])) {
-					System.out.println("ERRO argumento.");
-					System.out.print("> ");
+					argumentError();
 					continue;
 				}
 				else {
@@ -194,8 +179,7 @@ public class AppMain {
 			else if(command.startsWith("bike-up")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 				String abrev = tokens[1];
@@ -204,8 +188,7 @@ public class AppMain {
 			else if(command.startsWith("bike-down")) {
 				String[] tokens = command.split(" ");
 				if(tokens.length != 2) {
-					System.out.println("Comando não encontrado.");
-					System.out.print("> ");
+					commandNotFound();
 					continue;
 				}
 				String abrev = tokens[1];
@@ -223,7 +206,8 @@ public class AppMain {
 				System.exit(0);
 			}
 			else {
-				System.out.println("Comando não encontrado.");
+				commandNotFound();
+				continue;
 			}
 			System.out.print("> ");
 		}
@@ -237,5 +221,15 @@ public class AppMain {
 	private static boolean isFloat(String s) {
 		return s != null && s.matches("^[-+]?[0-9]*.?[0-9]+$");
     }
+
+	private static void commandNotFound() {
+		System.out.println("ERRO Comando não encontrado.");
+		System.out.print("> ");
+	}
+
+	private static void argumentError() {
+		System.out.println("ERRO argumento.");
+		System.out.print("> ");
+	}
 
 }

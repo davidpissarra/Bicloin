@@ -33,11 +33,13 @@ message IsBikedUp {
 }
 message ReadResponse {
   google.protobuf.Any registerValue = 1;
+  int32 tag = 2;
 }
 
 message WriteRequest {
   string registerName = 1;
   google.protobuf.Any value = 2;
+  int32 tag = 3;
 }
 
 message WriteResponse {

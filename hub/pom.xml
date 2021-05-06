@@ -113,7 +113,7 @@
 						<argument>${zoo.port}</argument>
 						<argument>${hub.host}</argument>
 						<argument>${hub.port}</argument>
-						<argument>${hub.path}</argument>
+						<argument>${hub.instance}</argument>
 						<argument>users.csv</argument>
 						<argument>stations.csv</argument>
 						<argument>initRec</argument>

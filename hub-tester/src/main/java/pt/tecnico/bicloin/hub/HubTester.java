@@ -22,7 +22,7 @@ public class HubTester {
 
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
-			HubFrontend frontend = new HubFrontend(zkNaming, user);
+			HubFrontend frontend = new HubFrontend(zkNaming, user, "/grpc/bicloin/hub/1");
 			String pingOutput = frontend.ping();
 			System.out.println(pingOutput);
 			frontend.close();

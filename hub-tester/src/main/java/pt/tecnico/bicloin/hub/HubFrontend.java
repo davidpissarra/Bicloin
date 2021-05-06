@@ -36,12 +36,14 @@ public class HubFrontend implements AutoCloseable {
     private Map<String, Tag> tags = new HashMap<>();
     private AppUser user;
 
-    public HubFrontend(ZKNaming zkNaming, AppUser user) throws ZKNamingException {
+    public HubFrontend(ZKNaming zkNaming, AppUser user, String path) throws ZKNamingException {
         this.zkNaming = zkNaming;
         this.user = user;
+        setHub(path);
     }
 
-    public void setHub(ZKRecord record) {
+    public void setHub(String path) throws ZKNamingException {
+        ZKRecord record = zkNaming.lookup(path);
         String target = record.getURI();
         this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         this.stub = HubServiceGrpc.newBlockingStub(channel);
@@ -103,12 +105,8 @@ public class HubFrontend implements AutoCloseable {
                                             .setNStations(nStations)
                                             .build();
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             LocateStationResponse response = stub.withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS).locateStation(request);
             return responseOutput(response);
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -124,12 +122,8 @@ public class HubFrontend implements AutoCloseable {
 
     public String ping() {
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             PingRequest request = PingRequest.newBuilder().build();
             return responseOutput(stub.ping(request));
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -146,14 +140,10 @@ public class HubFrontend implements AutoCloseable {
     public String sysStatus() {
         SysStatusRequest sysStatusRequest = SysStatusRequest.newBuilder().build();
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             SysStatusResponse sysStatusResponse = stub
                                                     .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                                     .sysStatus(sysStatusRequest);
             return responseOutput(sysStatusResponse); 
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -169,15 +159,11 @@ public class HubFrontend implements AutoCloseable {
 
     public String balance() {
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
             BalanceRequest balanceRequest = BalanceRequest.newBuilder().setUsername(user.getId()).build();
-            setHub(record);
             BalanceResponse response = stub
                                         .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                         .balance(balanceRequest);
             return responseOutput(response);
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -193,8 +179,6 @@ public class HubFrontend implements AutoCloseable {
 
     public String topUp(Integer value) {
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             TopUpRequest topUpRequest = TopUpRequest.newBuilder()
                                             .setUsername(user.getId())
                                             .setAmount(value)
@@ -204,8 +188,6 @@ public class HubFrontend implements AutoCloseable {
                                         .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                         .topUp(topUpRequest);
             return responseOutput(response);
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -221,8 +203,6 @@ public class HubFrontend implements AutoCloseable {
 
     public String infoStation(String abrev) {
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             InfoStationRequest infoStationRequest = InfoStationRequest.newBuilder()
                                             .setStationId(abrev)
                                             .build();
@@ -230,8 +210,6 @@ public class HubFrontend implements AutoCloseable {
                                             .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                             .infoStation(infoStationRequest);
             return responseOutput(response);
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -247,8 +225,6 @@ public class HubFrontend implements AutoCloseable {
 
     public String bikeUp(String abrev) {
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             BikeUpRequest request = BikeUpRequest
                                             .newBuilder()
                                             .setUsername(user.getId())
@@ -260,8 +236,6 @@ public class HubFrontend implements AutoCloseable {
                                         .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                         .bikeUp(request);
             return responseOutput(response);
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";
@@ -277,8 +251,6 @@ public class HubFrontend implements AutoCloseable {
 
     public String bikeDown(String abrev) {
         try {
-            ZKRecord record = zkNaming.lookup("/grpc/bicloin/hub/1");
-            setHub(record);
             BikeDownRequest request = BikeDownRequest
                                             .newBuilder()
                                             .setUsername(user.getId())
@@ -290,8 +262,6 @@ public class HubFrontend implements AutoCloseable {
                                             .withDeadlineAfter(timeoutDelay, TimeUnit.SECONDS)
                                             .bikeDown(request);
             return responseOutput(response); 
-        } catch (ZKNamingException e) {
-            return "ERRO Servidor Hub não encontrado.";
         } catch (StatusRuntimeException e) {
             if(e.getStatus().getCode() == Code.DEADLINE_EXCEEDED) {
                 return "ERRO Tempo de conexão com o Hub expirado.";

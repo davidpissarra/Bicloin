@@ -28,14 +28,12 @@ public class BaseIT {
 			String zooHost = testProps.getProperty("zoo.host");
 			String zooPort = testProps.getProperty("zoo.port");
 			recPath = testProps.getProperty("rec.path");
-			frontend = new RecFrontend(new ZKNaming(zooHost, zooPort), recPath);
+			frontend = new RecFrontend(new ZKNaming(zooHost, zooPort));
 
 		}catch (IOException e) {
 			final String msg = String.format("Could not load properties file {}", TEST_PROP_FILE);
 			System.out.println(msg);
 			throw e;
-		} catch (ZKNamingException e) {
-			System.out.println(e.getMessage());
 		}
 
 	}

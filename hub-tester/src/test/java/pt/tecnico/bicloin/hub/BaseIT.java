@@ -34,7 +34,8 @@ public class BaseIT {
 			Float longitude = Float.parseFloat(testProps.getProperty("user.longitude"));
 
 			frontend = new HubFrontend(new ZKNaming(zooHost, zooPort)
-										, new AppUser(username, phoneNumber, latitude, longitude));
+										, new AppUser(username, phoneNumber, latitude, longitude)
+										, "/grpc/bicloin/hub/1");
 
 		} catch (IOException e) {
 			final String msg = String.format("Could not load properties file {}", TEST_PROP_FILE);

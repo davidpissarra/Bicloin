@@ -23,7 +23,7 @@ public class RecTester {
 		
 		try {
 			ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
-			RecFrontend frontend = new RecFrontend(zkNaming, path);
+			RecFrontend frontend = new RecFrontend(zkNaming);
 			
 			String output = frontend.ping();
 			System.out.println(output);

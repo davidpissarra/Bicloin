@@ -1,12 +1,17 @@
 package pt.tecnico.rec;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import pt.tecnico.rec.grpc.RecServiceGrpc;
 import pt.tecnico.rec.grpc.Rec.*;
@@ -18,37 +23,22 @@ public class RecFrontend implements AutoCloseable {
 
     private ManagedChannel channel;
     private RecServiceGrpc.RecServiceBlockingStub stub;
-    private Integer instance;
-    private ZKNaming zkNaming;
+    private Collection<ZKRecord> records;
+    private Integer quorumThreshold;
 
-    public RecFrontend(ZKNaming zkNaming, String path) throws ZKNamingException {
-        this.zkNaming = zkNaming;
-        setRec(zkNaming.lookup(path));
-    }
-
-    public Integer getInstance() {
-        return instance;
+    public RecFrontend(ZKNaming zkNaming) throws ZKNamingException {
+        this.records = zkNaming.listRecords("/grpc/bicloin/rec");
+        this.quorumThreshold = Math.floorDiv(records.size(), 2);
     }
 
     public void setRec(ZKRecord record) {
         String target = record.getURI();
         this.channel = ManagedChannelBuilder.forTarget(target).usePlaintext().build();
         this.stub = RecServiceGrpc.newBlockingStub(channel);
-        this.instance = getInstanceNumber(record);
     }
 
-    private Integer getInstanceNumber(ZKRecord record) {
-        String path = record.getPath();
-        Integer lastSlashIndex = path.lastIndexOf('/');
-		return Integer.valueOf(path.substring(lastSlashIndex + 1));
-    }
-
-    public Collection<ZKRecord> getHubRecords() throws ZKNamingException {
-        return zkNaming.listRecords("/grpc/bicloin/hub");
-    }
-
-    public Collection<ZKRecord> getRecRecords() throws ZKNamingException {
-        return zkNaming.listRecords("/grpc/bicloin/rec");
+    public Collection<ZKRecord> getRecords() {
+        return this.records;
     }
 
     public String ping() {
@@ -57,8 +47,33 @@ public class RecFrontend implements AutoCloseable {
     }
 
     public ReadResponse read(String registerName) throws StatusRuntimeException {
-        ReadRequest request = ReadRequest.newBuilder().setRegisterName(registerName).build();
-        return stub.read(request);
+        try {
+            ReadRequest request = ReadRequest
+                                        .newBuilder()
+                                        .setRegisterName(registerName)
+                                        .build();
+            List<Message> responseCollector = Collections.synchronizedList(new ArrayList<>());
+            MainThread mainThread = new MainThread(responseCollector, quorumThreshold);
+            mainThread.start();
+            List<RecThread> threads = new ArrayList<>();
+            for(ZKRecord record: this.records) {
+                threads.add(new RecThread(responseCollector, record, request));
+            }
+            for(RecThread thread: threads) {
+                thread.start();
+            }
+            mainThread.join();
+            for(RecThread thread: threads) {
+                thread.shutDownChannel();
+            }
+            if(mainThread.getTimeout() == true) {
+                throw new StatusRuntimeException(Status.DEADLINE_EXCEEDED);
+            }
+            return (ReadResponse) mainThread.getMessage();
+        } catch (InterruptedException e) {
+            System.out.println("Caught exception: " + e.toString());
+            throw new StatusRuntimeException(Status.INTERNAL);
+        }
     }
 
     public Integer readBalance(String registerName) throws StatusRuntimeException, InvalidProtocolBufferException {
@@ -83,12 +98,31 @@ public class RecFrontend implements AutoCloseable {
 
     
     public WriteResponse write(String registerName, Any value) throws StatusRuntimeException {
-        WriteRequest request = WriteRequest
+        try {
+            WriteRequest request = WriteRequest
                                     .newBuilder()
                                     .setRegisterName(registerName)
                                     .setValue(value)
                                     .build();
-        return stub.write(request);
+            List<Message> responseCollector = Collections.synchronizedList(new ArrayList<>());
+            MainThread mainThread = new MainThread(responseCollector, quorumThreshold);
+            mainThread.start();
+            List<RecThread> threads = new ArrayList<>();
+            for(ZKRecord record: this.records) {
+                threads.add(new RecThread(responseCollector, record, request));
+            }
+            for(RecThread thread: threads) {
+                thread.start();
+            }
+            mainThread.join();
+            for(RecThread thread: threads) {
+                thread.shutDownChannel();
+            }
+            return (WriteResponse) mainThread.getMessage();
+        } catch (InterruptedException e) {
+            System.out.println("Caught exception: " + e.toString());
+            throw new StatusRuntimeException(Status.INTERNAL);
+        }
     }
 
     public Integer writeBalance(String registerName, Integer balance) throws StatusRuntimeException, InvalidProtocolBufferException {

@@ -41,24 +41,20 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
     
     private RecFrontend recFrontend;
-    private HubFrontend hubFrontend;
     private ImmutableRecords immutableRecords;
     private Integer instance;
 
-    public HubServerImpl(Integer instance, RecFrontend recFrontend, HubFrontend hubFrontend, String users, String stations, boolean initRec) throws FileNotFoundException {
+    public HubServerImpl(Integer instance, RecFrontend recFrontend,
+                            String users, String stations, boolean initRec)
+                            throws FileNotFoundException {
         super();
         this.instance = instance;
         this.recFrontend = recFrontend;
-        this.hubFrontend = hubFrontend;
         immutableRecords = new ImmutableRecords(users, stations, initRec, recFrontend);
     }
 
     private Integer getHubInstance() {
         return instance;
-    }
-
-    private Integer getRecInstance() {
-        return recFrontend.getInstance();
     }
 
     @Override
@@ -76,20 +72,15 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
 
     @Override
     public void sysStatus(Hub.SysStatusRequest request, StreamObserver<Hub.SysStatusResponse> responseObserver) {
-        try {
-            Collection<ZKRecord> recRecords = recFrontend.getRecRecords();
-            
-            String output = "Hub Server is UP.\n";
-
-            output = pingRecs(recRecords, output);
-
-            Hub.SysStatusResponse response = Hub.SysStatusResponse.newBuilder().setOutput(output).build();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+        Collection<ZKRecord> recRecords = recFrontend.getRecords();
         
-        } catch(ZKNamingException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO interno.").asRuntimeException());
-        }
+        String output = "Hub Server is UP.\n";
+
+        output = pingRecs(recRecords, output);
+
+        Hub.SysStatusResponse response = Hub.SysStatusResponse.newBuilder().setOutput(output).build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     private String pingRecs(Collection<ZKRecord> recRecords, String output) {
@@ -98,7 +89,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 recFrontend.setRec(rec);
                 output += recFrontend.ping() + "\n";
             } catch(StatusRuntimeException e) {
-                output += "ERRO Rec instance number " + getRecInstance() + " is DOWN.\n";
+                output += "ERRO Rec incontactável.\n";
             }
         }
         return output;
@@ -153,7 +144,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onCompleted();
             return;
         } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec incontactável.").asRuntimeException());
         }
     }
 
@@ -198,7 +189,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onCompleted();
             return;
         } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec incontactável.").asRuntimeException());
         }
     }
 
@@ -236,7 +227,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                                                 .build();
                 protoStations.add(message);
             } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-                responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+                responseObserver.onError(INTERNAL.withDescription("ERRO Rec incontactável.").asRuntimeException());
             }                        
         });
 
@@ -315,7 +306,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec incontactável.").asRuntimeException());
         }
     }
 
@@ -377,7 +368,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch(StatusRuntimeException | InvalidProtocolBufferException e) {
-            responseObserver.onError(INTERNAL.withDescription("ERRO Rec instance number " + getRecInstance() + " is DOWN.").asRuntimeException());
+            responseObserver.onError(INTERNAL.withDescription("ERRO Rec incontactável.").asRuntimeException());
         }
     }
 

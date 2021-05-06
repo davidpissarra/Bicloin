@@ -8,6 +8,8 @@ import pt.tecnico.rec.domain.Records;
 import pt.tecnico.rec.grpc.RecServiceGrpc;
 import pt.tecnico.rec.grpc.Rec.*;
 
+import pt.tecnico.rec.domain.*;
+
 import static io.grpc.Status.INTERNAL;
 import static io.grpc.Status.INVALID_ARGUMENT;;
 
@@ -23,7 +25,7 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
 
     @Override
     public void ping(PingRequest request, StreamObserver<PingResponse> responseObserver) {
-        String output = "Rec instance number " + instance + " is UP.";
+        String output = "Réplica " + instance + " do rec está ligado.";
         PingResponse response = PingResponse.newBuilder().setOutput(output).build();
         responseObserver.onNext(response);
 		responseObserver.onCompleted();
@@ -34,29 +36,44 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         String type = registerName.substring(0, lastSlashIndex);
 
         if(type.equals("balance")) {
-            Balance balance = Balance.newBuilder().setBalance(records.readBalance(registerName)).build();
+            RecBalance recBalance = records.readBalance(registerName);
+            Balance balance = Balance.newBuilder().setBalance(recBalance.getBalance()).build();
+            Integer tag = recBalance.getTag();
 			Any value = Any.pack(balance);
-            return ReadResponse.newBuilder().setRegisterValue(value).build();
+            
+            return ReadResponse.newBuilder().setRegisterValue(value).setTag(tag).build();
         }
         else if(type.equals("bikes")) {
-            Bikes bikes = Bikes.newBuilder().setBikes(records.readBikes(registerName)).build();
+            RecBikes recBikes = records.readBikes(registerName);
+            Bikes bikes = Bikes.newBuilder().setBikes(recBikes.getBikes()).build();
+            Integer tag = recBikes.getTag();
 			Any value = Any.pack(bikes);
-            return ReadResponse.newBuilder().setRegisterValue(value).build();
+            
+            return ReadResponse.newBuilder().setRegisterValue(value).setTag(tag).build();
         }
         else if(type.equals("bikeUpStats")) {
-            BikeUpStats bikeUpStats = BikeUpStats.newBuilder().setBikeUpStats(records.readBikeUpStats(registerName)).build();
+            RecBikeUpStats recBikeUpStats = records.readBikeUpStats(registerName);
+            BikeUpStats bikeUpStats = BikeUpStats.newBuilder().setBikeUpStats(recBikeUpStats.getBikeUpStats()).build();
+            Integer tag = recBikeUpStats.getTag();
 			Any value = Any.pack(bikeUpStats);
-            return ReadResponse.newBuilder().setRegisterValue(value).build();
+            
+            return ReadResponse.newBuilder().setRegisterValue(value).setTag(tag).build();
         }
         else if(type.equals("bikeDownStats")) {
-            BikeDownStats bikeDownStats = BikeDownStats.newBuilder().setBikeDownStats(records.readBikeDownStats(registerName)).build();
+            RecBikeDownStats recBikeDownStats = records.readBikeDownStats(registerName);
+            BikeDownStats bikeDownStats = BikeDownStats.newBuilder().setBikeDownStats(recBikeDownStats.getBikeDownStats()).build();
+            Integer tag = recBikeDownStats.getTag();
 			Any value = Any.pack(bikeDownStats);
-            return ReadResponse.newBuilder().setRegisterValue(value).build();
+            
+            return ReadResponse.newBuilder().setRegisterValue(value).setTag(tag).build();
         }
         else if(type.equals("isBikedUp")) {
-            IsBikedUp isBikedUp = IsBikedUp.newBuilder().setIsBikedUp(records.readIsUserBikedUp(registerName)).build();
+            RecIsUserBikedUp recIsUserBikedUp = records.readIsUserBikedUp(registerName);
+            IsBikedUp isBikedUp = IsBikedUp.newBuilder().setIsBikedUp(recIsUserBikedUp.getIsUserBikedUp()).build();
+            Integer tag = recIsUserBikedUp.getTag();
 			Any value = Any.pack(isBikedUp);
-            return ReadResponse.newBuilder().setRegisterValue(value).build();
+            
+            return ReadResponse.newBuilder().setRegisterValue(value).setTag(tag).build();
         }
 
         return null;
@@ -79,7 +96,9 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         if(type.equals("balance")) {
             try {
                 Integer balance = request.getValue().unpack(Balance.class).getBalance();
-                records.writeBalance(registerName, balance);
+                Integer tag = request.getTag();
+                RecBalance recBalance = new RecBalance(balance, tag);
+                records.writeBalance(registerName, recBalance);
                 return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
@@ -88,7 +107,9 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         else if(type.equals("bikes")) {
             try {
                 Integer bikes = request.getValue().unpack(Bikes.class).getBikes();
-                records.writeBikes(registerName, bikes);
+                Integer tag = request.getTag();
+                RecBikes recBikes = new RecBikes(bikes, tag);
+                records.writeBikes(registerName, recBikes);
                 return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
@@ -97,7 +118,9 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         else if(type.equals("bikeUpStats")) {
             try {
                 Integer bikeUpStats = request.getValue().unpack(BikeUpStats.class).getBikeUpStats();
-                records.writeBikeUpStats(registerName, bikeUpStats);
+                Integer tag = request.getTag();
+                RecBikeUpStats recBikeUpStats = new RecBikeUpStats(bikeUpStats, tag);
+                records.writeBikeUpStats(registerName, recBikeUpStats);
                 return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
@@ -106,7 +129,9 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         else if(type.equals("bikeDownStats")) {
             try {
                 Integer bikeDownStats = request.getValue().unpack(BikeDownStats.class).getBikeDownStats();
-                records.writeBikeDownStats(registerName, bikeDownStats);
+                Integer tag = request.getTag();
+                RecBikeDownStats recBikeDownStats = new RecBikeDownStats(bikeDownStats, tag);
+                records.writeBikeDownStats(registerName, recBikeDownStats);
                 return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
@@ -114,8 +139,10 @@ public class RecServerImpl extends RecServiceGrpc.RecServiceImplBase {
         }
         else if(type.equals("isBikedUp")) {
             try {
-                Boolean isBikedUp = request.getValue().unpack(IsBikedUp.class).getIsBikedUp();
-                records.writeIsUserBikedUp(registerName, isBikedUp);
+                Boolean isUserBikedUp = request.getValue().unpack(IsBikedUp.class).getIsBikedUp();
+                Integer tag = request.getTag();
+                RecIsUserBikedUp recIsUserBikedUp = new RecIsUserBikedUp(isUserBikedUp, tag);
+                records.writeIsUserBikedUp(registerName, recIsUserBikedUp);
                 return WriteResponse.newBuilder().setRegisterValue(request.getValue()).build();
             } catch (InvalidProtocolBufferException e) {
                 responseObserver.onError(INTERNAL.withDescription(e.getMessage()).asRuntimeException());
