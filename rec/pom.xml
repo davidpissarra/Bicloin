@@ -20,7 +20,7 @@
 		<zoo.host>localhost</zoo.host>
 		<zoo.port>2181</zoo.port>
 
-		<rec.instance>3</rec.instance><!-- instance number -->
+		<rec.instance>1</rec.instance><!-- instance number -->
 
 		<rec.host>localhost</rec.host>
 		<rec.port>809${rec.instance}</rec.port>

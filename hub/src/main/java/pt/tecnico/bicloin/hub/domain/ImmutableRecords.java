@@ -73,7 +73,7 @@ public class ImmutableRecords {
         String isBikedUpRegisterName = "isBikedUp-" + abrev;
     
         try {
-            frontend.writeIsBikedUp(isBikedUpRegisterName, false);
+            frontend.writeIsBikedUp(isBikedUpRegisterName, false, true);
         } catch(StatusRuntimeException e) {
             System.out.println("Rec instance is DOWN.\n");
         } catch (InvalidProtocolBufferException e) {
@@ -86,9 +86,9 @@ public class ImmutableRecords {
         String bikeUpStatsRegisterName = "bikeUpStats-" + abrev;
         String bikeDownStatsRegisterName = "bikeDownStats-" + abrev;
         try {
-            frontend.writeBikes(bikesRegisterName, bikesAvailable);
-            frontend.writeBikeUpStats(bikeUpStatsRegisterName, 0);
-            frontend.writeBikeDownStats(bikeDownStatsRegisterName, 0);
+            frontend.writeBikes(bikesRegisterName, bikesAvailable, true);
+            frontend.writeBikeUpStats(bikeUpStatsRegisterName, 0, true);
+            frontend.writeBikeDownStats(bikeDownStatsRegisterName, 0, true);
         } catch(StatusRuntimeException e) {
             System.out.println("Rec instance is DOWN.\n");
         } catch (InvalidProtocolBufferException e) {

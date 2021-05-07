@@ -132,7 +132,7 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
         String registerName = "balance-" + username;
         try {
             Integer currentBalance = recFrontend.readBalance(registerName);
-            Integer topUpBalance = recFrontend.writeBalance(registerName, currentBalance + topUpRequest.getAmount() * 10);
+            Integer topUpBalance = recFrontend.writeBalance(registerName, currentBalance + topUpRequest.getAmount() * 10, false);
             TopUpResponse topUpResponse = TopUpResponse.newBuilder().setBalance(topUpBalance).build();
 
             if(Context.current().isCancelled()) {
@@ -288,16 +288,16 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 return;
             }
 
-            recFrontend.writeIsBikedUp(isBikedUpRegisterName, true);
-            recFrontend.writeBikes(bikesRegisterName, bikes - 1);
-            recFrontend.writeBalance(balanceRegisterName, balance - 10);
-            recFrontend.writeBikeUpStats(bikeUpStatsRegisterName, bikeUpStats + 1);
+            recFrontend.writeIsBikedUp(isBikedUpRegisterName, true, false);
+            recFrontend.writeBikes(bikesRegisterName, bikes - 1, false);
+            recFrontend.writeBalance(balanceRegisterName, balance - 10, false);
+            recFrontend.writeBikeUpStats(bikeUpStatsRegisterName, bikeUpStats + 1, false);
 
             if(Context.current().isCancelled()) {
-                recFrontend.writeIsBikedUp(isBikedUpRegisterName, false);
-                recFrontend.writeBikes(bikesRegisterName, bikes);
-                recFrontend.writeBalance(balanceRegisterName, balance);
-                recFrontend.writeBikeUpStats(bikeUpStatsRegisterName, bikeUpStats);
+                recFrontend.writeIsBikedUp(isBikedUpRegisterName, false, false);
+                recFrontend.writeBikes(bikesRegisterName, bikes, false);
+                recFrontend.writeBalance(balanceRegisterName, balance, false);
+                recFrontend.writeBikeUpStats(bikeUpStatsRegisterName, bikeUpStats, false);
                 return;
             }
 
@@ -350,16 +350,16 @@ public class HubServerImpl extends HubServiceGrpc.HubServiceImplBase {
                 return;
             }
 
-            recFrontend.writeIsBikedUp(isBikedUpRegisterName, false);
-            recFrontend.writeBikes(bikesRegisterName, bikes + 1);
-            recFrontend.writeBalance(balanceRegisterName, balance + station.getReward());
-            recFrontend.writeBikeDownStats(bikeDownStatsRegisterName, bikeDownStats + 1);
+            recFrontend.writeIsBikedUp(isBikedUpRegisterName, false, false);
+            recFrontend.writeBikes(bikesRegisterName, bikes + 1, false);
+            recFrontend.writeBalance(balanceRegisterName, balance + station.getReward(), false);
+            recFrontend.writeBikeDownStats(bikeDownStatsRegisterName, bikeDownStats + 1, false);
 
             if(Context.current().isCancelled()) {
-                recFrontend.writeIsBikedUp(isBikedUpRegisterName, true);
-                recFrontend.writeBikes(bikesRegisterName, bikes);
-                recFrontend.writeBalance(balanceRegisterName, balance);
-                recFrontend.writeBikeDownStats(bikeDownStatsRegisterName, bikeDownStats);
+                recFrontend.writeIsBikedUp(isBikedUpRegisterName, true, false);
+                recFrontend.writeBikes(bikesRegisterName, bikes, false);
+                recFrontend.writeBalance(balanceRegisterName, balance, false);
+                recFrontend.writeBikeDownStats(bikeDownStatsRegisterName, bikeDownStats, false);
                 return;
             }
 

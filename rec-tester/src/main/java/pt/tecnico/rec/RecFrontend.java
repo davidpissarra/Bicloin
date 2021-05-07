@@ -24,11 +24,43 @@ public class RecFrontend implements AutoCloseable {
     private ManagedChannel channel;
     private RecServiceGrpc.RecServiceBlockingStub stub;
     private Collection<ZKRecord> records;
-    private Integer quorumThreshold;
+    private int quorumThresholdRead;
+    private int quorumThresholdWrite;
+    private int numberReads;
+    private int numberWrites;
 
     public RecFrontend(ZKNaming zkNaming) throws ZKNamingException {
         this.records = zkNaming.listRecords("/grpc/bicloin/rec");
-        this.quorumThreshold = Math.floorDiv(records.size(), 2);
+        this.numberReads = 0;
+        this.numberWrites = 0;
+        updateQuorumThreshold();
+    }
+
+    public void updateQuorumThreshold() {
+        if(this.records.size() < 5) {
+            this.quorumThresholdRead = (int) (this.records.size() / 2);
+            this.quorumThresholdWrite = (int) (this.records.size() / 2);
+        }
+        else {
+            if(this.numberReads == 0 || this.numberWrites == 0) {
+                this.quorumThresholdRead = (int) (this.records.size() / 2);
+                this.quorumThresholdWrite = (int) (this.records.size() / 2);
+            }
+            else {
+                double readRatio = (double) this.numberReads / (this.numberReads + this.numberWrites);
+                this.quorumThresholdWrite = (int) (this.records.size() * readRatio);
+                if(records.size() % 2 == 0) {
+                    this.quorumThresholdRead = this.records.size() - this.quorumThresholdWrite;
+                }
+                else {
+                    this.quorumThresholdRead = this.records.size() - this.quorumThresholdWrite - 1;
+                }
+            }
+        }
+        if(this.quorumThresholdWrite >= this.records.size() - 1) {
+            this.quorumThresholdWrite = this.records.size() - 2;
+            this.quorumThresholdRead = 1;
+        }
     }
 
     public void setRec(ZKRecord record) {
@@ -54,12 +86,14 @@ public class RecFrontend implements AutoCloseable {
 
     public ReadResponse read(String registerName) throws StatusRuntimeException {
         try {
+            this.numberReads++;
+            this.updateQuorumThreshold();
             ReadRequest request = ReadRequest
                                         .newBuilder()
                                         .setRegisterName(registerName)
                                         .build();
             List<Message> responseCollector = Collections.synchronizedList(new ArrayList<>());
-            MainThread mainThread = new MainThread(responseCollector, quorumThreshold);
+            MainThread mainThread = new MainThread(responseCollector, quorumThresholdRead);
             mainThread.start();
             List<RecThread> threads = new ArrayList<>();
             for(ZKRecord record: this.records) {
@@ -103,15 +137,19 @@ public class RecFrontend implements AutoCloseable {
     }
 
     
-    public WriteResponse write(String registerName, Any value) throws StatusRuntimeException {
+    public WriteResponse write(String registerName, Any value, Boolean initRec) throws StatusRuntimeException {
         try {
+            if(initRec == false) {
+                this.numberWrites++;
+                this.updateQuorumThreshold();
+            }
             WriteRequest request = WriteRequest
                                     .newBuilder()
                                     .setRegisterName(registerName)
                                     .setValue(value)
                                     .build();
             List<Message> responseCollector = Collections.synchronizedList(new ArrayList<>());
-            MainThread mainThread = new MainThread(responseCollector, quorumThreshold);
+            MainThread mainThread = new MainThread(responseCollector, quorumThresholdWrite);
             mainThread.start();
             List<RecThread> threads = new ArrayList<>();
             for(ZKRecord record: this.records) {
@@ -131,34 +169,34 @@ public class RecFrontend implements AutoCloseable {
         }
     }
 
-    public Integer writeBalance(String registerName, Integer balance) throws StatusRuntimeException, InvalidProtocolBufferException {
+    public Integer writeBalance(String registerName, Integer balance, Boolean initRec) throws StatusRuntimeException, InvalidProtocolBufferException {
         Balance balanceMessage = Balance.newBuilder().setBalance(balance).build();
         Any value = Any.pack(balanceMessage);
-        return write(registerName, value).getRegisterValue().unpack(Balance.class).getBalance();
+        return write(registerName, value, initRec).getRegisterValue().unpack(Balance.class).getBalance();
     }
 
-    public Integer writeBikes(String registerName, Integer bikes) throws StatusRuntimeException, InvalidProtocolBufferException {
+    public Integer writeBikes(String registerName, Integer bikes, Boolean initRec) throws StatusRuntimeException, InvalidProtocolBufferException {
         Bikes bikesMessage = Bikes.newBuilder().setBikes(bikes).build();
         Any value = Any.pack(bikesMessage);
-        return write(registerName, value).getRegisterValue().unpack(Bikes.class).getBikes();
+        return write(registerName, value, initRec).getRegisterValue().unpack(Bikes.class).getBikes();
     }
 
-    public Integer writeBikeUpStats(String registerName, Integer bikeUpStats) throws StatusRuntimeException, InvalidProtocolBufferException {
+    public Integer writeBikeUpStats(String registerName, Integer bikeUpStats, Boolean initRec) throws StatusRuntimeException, InvalidProtocolBufferException {
         BikeUpStats bikeUpStatsMessage = BikeUpStats.newBuilder().setBikeUpStats(bikeUpStats).build();
         Any value = Any.pack(bikeUpStatsMessage);
-        return write(registerName, value).getRegisterValue().unpack(BikeUpStats.class).getBikeUpStats();
+        return write(registerName, value, initRec).getRegisterValue().unpack(BikeUpStats.class).getBikeUpStats();
     }
 
-    public Integer writeBikeDownStats(String registerName, Integer bikeDownStats) throws StatusRuntimeException, InvalidProtocolBufferException {
+    public Integer writeBikeDownStats(String registerName, Integer bikeDownStats, Boolean initRec) throws StatusRuntimeException, InvalidProtocolBufferException {
         BikeDownStats bikeDownStatsMessage = BikeDownStats.newBuilder().setBikeDownStats(bikeDownStats).build();
         Any value = Any.pack(bikeDownStatsMessage);
-        return write(registerName, value).getRegisterValue().unpack(BikeDownStats.class).getBikeDownStats();
+        return write(registerName, value, initRec).getRegisterValue().unpack(BikeDownStats.class).getBikeDownStats();
     }
 
-    public Boolean writeIsBikedUp(String registerName, Boolean isBikedUp) throws StatusRuntimeException, InvalidProtocolBufferException {
+    public Boolean writeIsBikedUp(String registerName, Boolean isBikedUp, Boolean initRec) throws StatusRuntimeException, InvalidProtocolBufferException {
         IsBikedUp isBikedUpMessage = IsBikedUp.newBuilder().setIsBikedUp(isBikedUp).build();
         Any value = Any.pack(isBikedUpMessage);
-        return write(registerName, value).getRegisterValue().unpack(IsBikedUp.class).getIsBikedUp();
+        return write(registerName, value, initRec).getRegisterValue().unpack(IsBikedUp.class).getIsBikedUp();
     }
 
     public void clean() throws StatusRuntimeException, InvalidProtocolBufferException {
