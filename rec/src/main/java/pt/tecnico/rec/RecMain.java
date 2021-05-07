@@ -28,39 +28,27 @@ public class RecMain {
 		final String zooPort = args[1];
 		final String host = args[2];
 		final String port = args[3];
-		final String path = args[4];
+		final Integer instance = Integer.valueOf(args[4]);
 
-		Integer lastSlashIndex = path.lastIndexOf('/');
-		final Integer instance = Integer.valueOf(path.substring(lastSlashIndex + 1));
+		final String path = "/grpc/bicloin/rec/" + instance;
 
-		ZKNaming zkNaming = null;
-		try {
-			zkNaming = new ZKNaming(zooHost, zooPort);
-			zkNaming.rebind(path, host, port);
+		ZKNaming zkNaming = new ZKNaming(zooHost, zooPort);
+		zkNaming.rebind(path, host, port);
 
-			final BindableService impl = new RecServerImpl(instance);
+		final BindableService impl = new RecServerImpl(instance);
 
-			// Create a new server to listen on port
-			Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
+		// Create a new server to listen on port
+		Server server = ServerBuilder.forPort(Integer.parseInt(port)).addService(impl).build();
 
-			// Start the server
-			server.start();
+		// Start the server
+		server.start();
 
-			// Server threads are running in the background.
-			System.out.println("Server started");
+		// Server threads are running in the background.
+		System.out.println("Server started");
 
-			final String target = "localhost" + ":" + port;
+		// Do not exit the main thread. Wait until server is terminated.
+		server.awaitTermination();
 
-			// Do not exit the main thread. Wait until server is terminated.
-			server.awaitTermination();
-
-			zkNaming.unbind(path, host, port);
-
-		} finally {
-			if(zkNaming != null) {
-				
-			}
-		}
-
+		zkNaming.unbind(path, host, port);
 	}	
 }

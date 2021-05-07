@@ -24,7 +24,6 @@
 
 		<rec.host>localhost</rec.host>
 		<rec.port>809${rec.instance}</rec.port>
-		<rec.path>/grpc/bicloin/rec/${rec.instance}</rec.path>
 	</properties>
 
 	<!-- Dependencies are code archives - JARs - on which your current module needs in order to compile, build, test, and/or to run. 
@@ -91,7 +90,7 @@
 						<argument>${zoo.port}</argument>
 						<argument>${rec.host}</argument>
 						<argument>${rec.port}</argument>
-						<argument>${rec.path}</argument>
+						<argument>${rec.instance}</argument>
 					</arguments>
 				</configuration>
 			</plugin>

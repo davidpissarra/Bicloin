@@ -108,7 +108,7 @@ Cada subsecção é respetiva a cada operação presente no *hub*.
 
     > top-up 25
 
-<span style="color:red">Carregamento deve ser entre 1 e 20 Euros.</span>
+<span style="color:red">ERRO Carregamento deve ser entre 1 e 20 Euros.</span>
 
 ## 2.3 *tag*
 
@@ -190,7 +190,7 @@ Correndo apenas 1 *hub*:
 
     > ping
 
-<span style="color:green">Hub instance number 1 is UP.</span> 
+<span style="color:green">Servidor hub está ligado.</span> 
 
 ## 2.11 *sys-status*
 
@@ -198,10 +198,87 @@ Correndo apenas 1 *hub* e 1 *rec*:
 
     > sys-status
 
-<span style="color:green">Hub instance number 1 is UP.</span>
+<span style="color:green">Servidor hub está ligado.</span>
 
-<span style="color:green">Rec instance number 1 is UP.</span>
+<span style="color:green">Réplica 1 do rec está ligada.</span>
 
-## 3. Considerações Finais
+<span style="color:green">Réplica 2 do rec está ligada.</span>
+
+<span style="color:green">Réplica 3 do rec está ligada.</span>
+
+<span style="color:green">Réplica 4 do rec está ligada.</span>
+
+<span style="color:green">Réplica 5 do rec está ligada.</span>
+
+## 3. DEMO: Replicação e tolerância a faltas
+
+### 3.1 *Lançar réplicas do rec*
+
+Instalar dependências:
+
+```sh
+$ mvn install -DskipTests
+```
+
+Lançar réplica (instância número 1 rec):
+
+```sh
+$ cd rec/target/appassembler/bin
+$ ./rec localhost 2181 localhost 8091 1
+```
+
+Lançar réplica (instância número 2 rec, noutro terminal):
+
+```sh
+$ cd rec/target/appassembler/bin
+$ ./rec localhost 2181 localhost 8092 2
+```
+
+Lançar réplica (instância número 3 rec, noutro terminal):
+
+```sh
+$ cd rec/target/appassembler/bin
+$ ./rec localhost 2181 localhost 8093 3
+```
+
+Lançar réplica (instância número 4 rec, noutro terminal):
+
+```sh
+$ cd rec/target/appassembler/bin
+$ ./rec localhost 2181 localhost 8094 4
+```
+
+Lançar réplica (instância número 5 rec, noutro terminal):
+
+```sh
+$ cd rec/target/appassembler/bin
+$ ./rec localhost 2181 localhost 8095 5
+```
+
+### 3.2 *Lançar servidor do hub (fornecer dados)*
+
+```sh
+$ cd hub/target/appassembler/bin
+$ ./hub localhost 2181 localhost 8081 1 ../../../src/main/java/pt/tecnico/bicloin/hub/users.csv ../../../src/main/java/pt/tecnico/bicloin/hub/stations.csv initRec
+```
+
+### 3.3 *Lançar app*
+
+Iniciar a aplicação com a utilizadora alice:
+
+```sh
+$ cd app/target/appassembler/bin
+$ ./app localhost 2181 alice +35191102030 38.7380 -9.3000
+```
+
+### 3.4 *Fazer interrogações*
+
+Seguir o ponto **2. Teste dos comandos**.
+
+### 3.5 *Tolerância a Faltas*
+
+Para testar a tolerância a faltas clicar Ctrl+Z num dos processos de uma réplica rec.
+
+## 4. Considerações Finais
 
 Estes testes não cobrem tudo, pelo que devem ter sempre em conta os testes de integração e o código.

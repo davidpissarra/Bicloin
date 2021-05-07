@@ -29,7 +29,7 @@ public class ImmutableRecords {
     }
 
     private void importUsers(String usersFilename, boolean initRec, RecFrontend frontend) throws FileNotFoundException {
-        String path = "src/main/java/pt/tecnico/bicloin/hub/" + usersFilename;
+        String path = usersFilename;
         Scanner scanner = new Scanner(new File(path));
         while(scanner.hasNext()) {
             String[] args = scanner.nextLine().split(",");
@@ -45,7 +45,7 @@ public class ImmutableRecords {
     }
 
     private void importStations(String stationsFilename, boolean initRec, RecFrontend frontend) throws FileNotFoundException {
-        String path = "src/main/java/pt/tecnico/bicloin/hub/" + stationsFilename;
+        String path = stationsFilename;
         Scanner scanner = new Scanner(new File(path));
         while(scanner.hasNext()) {
             String[] args = scanner.nextLine().split(",");
