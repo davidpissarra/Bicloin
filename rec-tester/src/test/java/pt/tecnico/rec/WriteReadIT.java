@@ -41,11 +41,11 @@ public class WriteReadIT extends BaseIT {
 	@Test
 	public void write() {
 		try {
-			frontend.writeBalance(BALANCE_REGISTER_NAME, BALANCE);
-			frontend.writeBikes(BIKES_REGISTER_NAME, BIKES);
-			frontend.writeBikeUpStats(BIKE_UP_STATS_REGISTER_NAME, BIKE_UP_STATS);
-			frontend.writeBikeDownStats(BIKE_DOWN_STATS_REGISTER_NAME, BIKE_DOWN_STATS);
-			frontend.writeIsBikedUp(IS_BIKED_UP_REGISTER_NAME, IS_BIKED_UP);
+			frontend.writeBalance(BALANCE_REGISTER_NAME, BALANCE, false);
+			frontend.writeBikes(BIKES_REGISTER_NAME, BIKES, false);
+			frontend.writeBikeUpStats(BIKE_UP_STATS_REGISTER_NAME, BIKE_UP_STATS, false);
+			frontend.writeBikeDownStats(BIKE_DOWN_STATS_REGISTER_NAME, BIKE_DOWN_STATS, false);
+			frontend.writeIsBikedUp(IS_BIKED_UP_REGISTER_NAME, IS_BIKED_UP, false);
 
 			Integer balance = frontend.readBalance(BALANCE_REGISTER_NAME);
 			Integer bikes = frontend.readBikes(BIKES_REGISTER_NAME);
