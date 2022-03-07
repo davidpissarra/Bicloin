@@ -1,17 +1,11 @@
-# A59-Bicloin
+# Bicloin
 
 Distributed Systems 2020-2021, 2nd semester project
 
 
 ## Authors
 
-**Group A59**
-
-92502 [Jorge Godinho](jorge.godinho@tecnico.ulisboa.pt)
-
-92448 [David Pissarra](david.pissarra@tecnico.ulisboa.pt)
-
-92426 [António Branco](pedro.paredes.branco@tecnico.ulisboa.pt)
+[David Pissarra](david.pissarra@tecnico.ulisboa.pt) & [Jorge Godinho](jorge.godinho@tecnico.ulisboa.pt) & [António Branco](pedro.paredes.branco@tecnico.ulisboa.pt)
 
 ## Getting Started
 
