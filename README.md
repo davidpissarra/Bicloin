@@ -5,7 +5,7 @@ Distributed Systems 2020-2021, 2nd semester project
 
 ## Authors
 
-[David Pissarra](david.pissarra@tecnico.ulisboa.pt) & [Jorge Godinho](jorge.godinho@tecnico.ulisboa.pt) & [António Branco](pedro.paredes.branco@tecnico.ulisboa.pt)
+David Pissarra & Jorge Godinho & António Branco
 
 ## Getting Started
 
